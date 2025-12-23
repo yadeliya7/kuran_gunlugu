@@ -1,16 +1,28 @@
-# kuran_gunlugu
+# 🌙 Kuran Günlüğü (Quran Diary)
 
-A new Flutter project.
+Her gün yeni bir ayet keşfedin, dinleyin ve ayetler üzerine kendi kişisel tefekkürlerinizi not alın. Ruhsal yolculuğunuzda size eşlik edecek modern bir rehber.
 
-## Getting Started
 
-This project is a starting point for a Flutter application.
 
-A few resources to get you started if this is your first Flutter project:
+## ✨ Özellikler
 
-- [Lab: Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Cookbook: Useful Flutter samples](https://docs.flutter.dev/cookbook)
+- **Günün Ayeti:** Her gün otomatik güncellenen, Arapça ve Meal (TR/EN) içeren ayet kartları.
+- **Sesli Dinleme:** Dünyaca ünlü hafızların sesinden ayetleri yüksek kalitede dinleme.
+- **Kişisel Günlük:** Her ayet için kendi notlarınızı ve tefekkürlerinizi kaydedin.
+- **Akıllı Paylaşım:** Ayetleri ve notlarınızı otomatik olarak şık bir görsel karta dönüştürüp sosyal medyada paylaşın.
+- **Geçmişe Yolculuk:** Premium üyelik ile takvim üzerinden geçmiş günlerin ayetlerine erişim.
+- **Bildirimler:** Her sabah sizi karşılayan hayırlı sabahlar mesajı ve günün ayeti hatırlatıcısı.
+- **Çoklu Dil Desteği:** Tamamen Türkçe ve İngilizce dil seçeneği.
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+## 🚀 Teknolojiler ve Paketler
+
+Bu uygulama Flutter SDK kullanılarak geliştirilmiştir. Kullanılan başlıca kütüphaneler:
+
+* **Screenshot:** Resimli paylaşım kartları oluşturmak için.
+* **Audioplayers:** Ayet seslerini oynatmak için.
+* **AutoSizeText:** Her metni ekrana mükemmel sığdırmak için.
+* **Shared Preferences:** Notları ve ayarları cihazda saklamak için.
+* **Flutter Local Notifications:** Günlük hatırlatıcılar için.
+
+---
+*Geliştirici: yadeliya-ertugrul
