@@ -124,11 +124,12 @@ final Map<String, Map<String, String>> dictionary = {
 String t(String key) {
   return dictionary[currentLanguage]?[key] ?? key;
 }
-
 // --- BİLDİRİM SERVİSİ (DÜZELTİLMİŞ) ---
 // --- BİLDİRİM SERVİSİ (GÜNCELLENMİŞ - ALARM YERİNE BİLDİRİM TARZI) ---
 // --- BİLDİRİM SERVİSİ (SADECE BİLDİRİM - ALARM İZNİ YOK) ---
 class BildirimServisi {
+  // 👇 Test için 5 saniye sonraya bildirim kurar
+ 
   static final FlutterLocalNotificationsPlugin _notifications = FlutterLocalNotificationsPlugin();
 
   static Future<void> baslat() async {
@@ -167,7 +168,7 @@ static Future<void> gunlukBildirimKur() async {
 
     try {
       // 2. Yarın sabah 09:00'u hedefle
-      final tz.TZDateTime baslangicZamani = _sonrakiSabah(10, 17);
+      final tz.TZDateTime baslangicZamani = _sonrakiSabah(09, 30);
 
       // 3. Mesajları hazırla (Dil seçeneğine göre)
       // Ayetin kendisini yazmıyoruz, merak ettirici mesaj yazıyoruz.
@@ -217,20 +218,17 @@ static Future<void> gunlukBildirimKur() async {
     return planlanan;
   }
 }
-
 void main() {
   // Main fonksiyonunu süper hafif yaptık. Sadece uygulamayı başlatıyor.
   WidgetsFlutterBinding.ensureInitialized();
   runApp(const KuranGunluguApp());
 }
-
 class KuranGunluguApp extends StatefulWidget {
   const KuranGunluguApp({super.key});
 
   @override
   State<KuranGunluguApp> createState() => _KuranGunluguAppState();
 }
-
 class _KuranGunluguAppState extends State<KuranGunluguApp> {
   Key key = UniqueKey();
 
@@ -258,7 +256,6 @@ class _KuranGunluguAppState extends State<KuranGunluguApp> {
     );
   }
 }
-
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
 
@@ -383,7 +380,6 @@ class GununAyetiEkrani extends StatefulWidget {
   @override
   State<GununAyetiEkrani> createState() => _GununAyetiEkraniState();
 }
-
 class _GununAyetiEkraniState extends State<GununAyetiEkrani> {
   late Future<AyetModel> futureAyet;
   DateTime seciliTarih = DateTime.now();
@@ -983,8 +979,7 @@ Widget _buildAyetContent() {
           ),
         ],
       ),
-
-
+            
       child: SingleChildScrollView(
         padding: const EdgeInsets.all(25),
         child: Column(
@@ -1233,7 +1228,6 @@ Widget _buildAyetContent() {
     );
   }
 }
-
 class PremiumEkrani extends StatelessWidget {
   const PremiumEkrani({super.key});
 
@@ -1300,13 +1294,11 @@ class PremiumEkrani extends StatelessWidget {
     );
   }
 }
-
 class AyarlarEkrani extends StatefulWidget {
   const AyarlarEkrani({super.key});
   @override
   State<AyarlarEkrani> createState() => _AyarlarEkraniState();
 }
-
 class _AyarlarEkraniState extends State<AyarlarEkrani> {
   void _dilDegistir(String yeniDil) async {
     final prefs = await SharedPreferences.getInstance();
@@ -1319,7 +1311,7 @@ class _AyarlarEkraniState extends State<AyarlarEkrani> {
     await prefs.setDouble('fontSize', yeniBoyut);
     setState(() { fontSizeMultiplier = yeniBoyut; });
   }
-
+  
 
   Widget _dilSecenek(String dilKod, String dilAd) {
     bool secili = currentLanguage == dilKod;
@@ -1501,4 +1493,27 @@ class _FavorilerEkraniState extends State<FavorilerEkrani> {
         );
       }
     }
-  
+  // Kodun en altına, tüm sınıfların dışına yapıştır:
+class PremiumDesenRessami extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = Colors.white.withValues(alpha: 0.03) // Çok çok silik beyaz (%3)
+      ..strokeWidth = 1; // İncecik
+
+    double step = 30.0; // Çizgilerin ne kadar sık olacağı (30px aralık)
+
+    // Ekranı baştan aşağı çapraz tarıyoruz
+    for (double i = -size.height; i < size.width; i += step) {
+      // Çizgiyi çek: (x1, y1) -> (x2, y2)
+      canvas.drawLine(
+        Offset(i, 0), 
+        Offset(i + size.height, size.height), 
+        paint
+      );
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+}
