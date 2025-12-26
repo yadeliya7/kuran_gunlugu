@@ -33,9 +33,13 @@ android {
 
     buildTypes {
         release {
-            // TODO: Add your own signing config for the release build.
-            // Signing with the debug keys for now, so `flutter run --release` works.
+            // Şimdilik debug imzasını kullanıyoruz (TestFlight için sorun olmaz)
             signingConfig = signingConfigs.getByName("debug")
+
+            // 👇 İŞTE KOTLIN FORMATI BÖYLE OLMALI:
+            isMinifyEnabled = false
+            isShrinkResources = false
+            proguardFiles(getDefaultProguardFile("proguard-android.txt"), "proguard-rules.pro")
         }
     }
 }
