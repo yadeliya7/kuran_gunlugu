@@ -13,6 +13,7 @@ import 'package:share_plus/share_plus.dart';
 import 'package:screenshot/screenshot.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:auto_size_text/auto_size_text.dart';
+import 'dart:typed_data';
 // BİLDİRİM PAKETLERİ
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:timezone/data/latest.dart' as tz;
@@ -166,7 +167,7 @@ static Future<void> gunlukBildirimKur() async {
 
     try {
       // 2. Yarın sabah 09:00'u hedefle
-      final tz.TZDateTime baslangicZamani = _sonrakiSabah(9, 30);
+      final tz.TZDateTime baslangicZamani = _sonrakiSabah(10, 17);
 
       // 3. Mesajları hazırla (Dil seçeneğine göre)
       // Ayetin kendisini yazmıyoruz, merak ettirici mesaj yazıyoruz.
@@ -727,7 +728,7 @@ class _GununAyetiEkraniState extends State<GununAyetiEkrani> {
     }
   }
 
-  @override@override
+  @override
   Widget build(BuildContext context) {
     bool isToday = DateFormat('yyyyMMdd').format(seciliTarih) == DateFormat('yyyyMMdd').format(DateTime.now());
 
