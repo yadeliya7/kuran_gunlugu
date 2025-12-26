@@ -1,7 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io'; 
-import 'dart:typed_data'; 
 import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
@@ -19,10 +18,11 @@ import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:timezone/data/latest.dart' as tz;
 import 'package:timezone/timezone.dart' as tz;
 import 'data.dart'; // <-- Yeni oluşturduğumuz dosyayı çağırıyoruz
+import 'package:flutter/services.dart'; // 👈 Titreşim için bu şart
 // --- GLOBAL AYARLAR ---
 String currentLanguage = 'tr'; 
 double fontSizeMultiplier = 16.0; 
-bool isPremiumUser = false; 
+bool isPremiumUser = true; 
 
 // --- SÖZLÜK ---
 final Map<String, Map<String, String>> dictionary = {
@@ -125,131 +125,98 @@ String t(String key) {
 }
 
 // --- BİLDİRİM SERVİSİ (DÜZELTİLMİŞ) ---
+// --- BİLDİRİM SERVİSİ (GÜNCELLENMİŞ - ALARM YERİNE BİLDİRİM TARZI) ---
+// --- BİLDİRİM SERVİSİ (SADECE BİLDİRİM - ALARM İZNİ YOK) ---
 class BildirimServisi {
   static final FlutterLocalNotificationsPlugin _notifications = FlutterLocalNotificationsPlugin();
 
   static Future<void> baslat() async {
-    // 1. Saat dilimi veritabanını yükle
     tz.initializeTimeZones(); 
     
-    // 2. KRİTİK DÜZELTME: Konumu açıkça Türkiye olarak ayarla
-    // Bunu yapmazsak uygulama "tz.local"ın ne olduğunu bulamayıp çöker.
     try {
-      var istanbul = tz.getLocation('Europe/Istanbul');
-      tz.setLocalLocation(istanbul);
+      tz.setLocalLocation(tz.getLocation('Europe/Istanbul'));
     } catch (e) {
-      // Eğer İstanbul'u bulamazsa UTC (Evrensel Saat) kullan, çökme.
       tz.setLocalLocation(tz.UTC);
-      debugPrint("Saat dilimi hatası, UTC kullanılıyor: $e");
     }
 
-    const AndroidInitializationSettings androidAyarlari = AndroidInitializationSettings('@mipmap/ic_launcher');
-    const InitializationSettings ayarlar = InitializationSettings(android: androidAyarlari);
-
-    await _notifications.initialize(
-      ayarlar,
-      onDidReceiveNotificationResponse: (NotificationResponse response) {
-        // Tıklanınca yapılacak işlemler
-      },
+    const AndroidInitializationSettings androidAyarlari = AndroidInitializationSettings('notification_icon');
+    const DarwinInitializationSettings iosAyarlari = DarwinInitializationSettings(
+      requestAlertPermission: true,
+      requestBadgePermission: true,
+      requestSoundPermission: true,
     );
+
+    const InitializationSettings ayarlar = InitializationSettings(
+      android: androidAyarlari, 
+      iOS: iosAyarlari
+    );
+
+    await _notifications.initialize(ayarlar);
+
+    // 👇 ARTIK SADECE BİLDİRİM İZNİ İSTİYORUZ (Alarm İzni İstemiyoruz)
     final androidImplementation = _notifications.resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>();
-    
     if (androidImplementation != null) {
-      // 1. Normal Bildirim İzni
       await androidImplementation.requestNotificationsPermission();
-      
-      // 2. Tam Zamanlı Alarm İzni (Android 12+ için ŞART)
-      // Bu kod çalışınca ekrana "Alarm kurmaya izin ver" penceresi gelebilir.
-      await androidImplementation.requestExactAlarmsPermission();
+      // ❌ await androidImplementation.requestExactAlarmsPermission(); // BU SATIRI SİLDİK
     }
-    
-    // İzin iste (Android 13+)
-    await _notifications.resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>()?.requestNotificationsPermission();
   }
-  static Future<void> denemeGonder() async {
-    const AndroidNotificationDetails androidDetay = AndroidNotificationDetails(
-      'gunluk_ayet_kanal', 
-      'Günlük Ayet Hatırlatıcı',
-      importance: Importance.max,
-      priority: Priority.high,
-    );
-    const NotificationDetails detaylar = NotificationDetails(android: androidDetay);
-
-    await _notifications.show(
-      999, 
-      'Test Başarılı! 🔔', 
-      'Bildirimler sorunsuz çalışıyor.', 
-      detaylar
-    );
-  }
-  static Future<void> gunlukBildirimKur() async {
+static Future<void> gunlukBildirimKur() async {
+    // 1. Eski bildirimleri temizle
     await _notifications.cancelAll();
 
     try {
-      try {
-        tz.setLocalLocation(tz.getLocation('Europe/Istanbul'));
-      } catch (e) {
-        tz.setLocalLocation(tz.UTC);
-      }
+      // 2. Yarın sabah 09:00'u hedefle
+      final tz.TZDateTime baslangicZamani = _sonrakiSabah(9, 30);
 
-      // 👇 İŞTE EKSİK OLAN SATIR buydu 👇
-      final tz.TZDateTime baslangicZamani = _sonrakiSabah(9, 43);
+      // 3. Mesajları hazırla (Dil seçeneğine göre)
+      // Ayetin kendisini yazmıyoruz, merak ettirici mesaj yazıyoruz.
+      String baslik = currentLanguage == 'en' ? 'Verse of the Day 🌙' : 'Günün Ayeti Hazır 🌙';
+      String icerik = currentLanguage == 'en'
+          ? "Today's verse is waiting for you. Would you like to read it?"
+          : "Bugünün ayeti seni bekliyor. Okumak ister misin?";
 
-      debugPrint("📅 7 Günlük Veritabanı Planı Yapılıyor...");
-
+      // 4. Gelecek 7 gün için planla
       for (int i = 0; i < 7; i++) {
         tz.TZDateTime planlananZaman = baslangicZamani.add(Duration(days: i));
         
-        int gununIndexi = int.parse(DateFormat("D").format(planlananZaman));
-        
-        // data.dart'tan çekiyor
-        AyetModel oGununAyeti = YerelVeri.getir(gununIndexi);
-        
-        String tamMetin = currentLanguage == 'en' ? oGununAyeti.ingilizce : oGununAyeti.turkce;
-        String baslik = "${oGununAyeti.sureAdi}, ${oGununAyeti.ayetNo}";
-
-        String bildirimMetni;
-        if (tamMetin.length > 100) {
-          bildirimMetni = "${tamMetin.substring(0, 100)}..."; 
-        } else {
-          bildirimMetni = tamMetin;
-        }
-        bildirimMetni += "\nGunun ayetini okumak için dokunun 👇";
-
         await _notifications.zonedSchedule(
-          i, 
-          baslik, 
-          bildirimMetni, 
+          i, // Her gün için farklı ID
+          baslik, // <-- "Günün Ayeti Hazır"
+          icerik, // <-- "Seni bekliyor..."
           planlananZaman,
           const NotificationDetails(
             android: AndroidNotificationDetails(
-              'gunluk_ayet_kanal_v2',
-              'Günlük Ayet Bildirimleri',
+              'kuran_gunlugu_hatirlatici_v1', // Kanal ID'si
+              'Günlük Hatırlatıcı',
+              channelDescription: 'Günlük okuma hatırlatması',
               importance: Importance.max,
               priority: Priority.high,
-              visibility: NotificationVisibility.public,
+              color: Color(0xFFD4AF37), // Altın Rengi
+              icon: 'notification_icon', // Şeffaf İkonun (drawable klasörüne attığın)
             ),
+            iOS: DarwinNotificationDetails(),
           ),
-          androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+          
+          // Alarm izni istemeden, pil dostu modda çalış
+          androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
           uiLocalNotificationDateInterpretation: UILocalNotificationDateInterpretation.absoluteTime,
         );
       }
-      
+      debugPrint("✅ 7 Günlük 'Seni Bekliyor' Bildirimleri Kuruldu.");
     } catch (e) {
-      debugPrint("❌ Alarm hatası: $e");
+      debugPrint("❌ Bildirim hatası: $e");
     }
   }
   static tz.TZDateTime _sonrakiSabah(int saat, int dakika) {
-    // Burada artık tz.local tanımlı olduğu için çökmez.
     final tz.TZDateTime simdi = tz.TZDateTime.now(tz.local);
     tz.TZDateTime planlanan = tz.TZDateTime(tz.local, simdi.year, simdi.month, simdi.day, saat, dakika);
-    
     if (planlanan.isBefore(simdi)) {
       planlanan = planlanan.add(const Duration(days: 1));
     }
     return planlanan;
   }
 }
+
 void main() {
   // Main fonksiyonunu süper hafif yaptık. Sadece uygulamayı başlatıyor.
   WidgetsFlutterBinding.ensureInitialized();
@@ -336,7 +303,8 @@ Future<void> _baslangicYuklemeleri() async {
         setState(() {
           currentLanguage = prefs.getString('language') ?? 'tr';
           fontSizeMultiplier = prefs.getDouble('fontSize') ?? 18.0;
-          isPremiumUser = prefs.getBool('isPremium') ?? false;
+          //isPremiumUser = prefs.getBool('isPremium') ?? false;
+          isPremiumUser = true;
         });
       }
     } catch (e) {
@@ -640,6 +608,11 @@ class _GununAyetiEkraniState extends State<GununAyetiEkrani> {
   }
 
   Future<void> _favoriyeEkleCikar(AyetModel ayet) async {
+    if (!isFavorited) {
+      HapticFeedback.mediumImpact(); // Eklendiğinde tok ses
+    } else {
+      HapticFeedback.selectionClick(); // Silindiğinde hafif tık
+    }
     final prefs = await SharedPreferences.getInstance();
     
     if (!mounted) return;
@@ -802,26 +775,58 @@ class _GununAyetiEkraniState extends State<GununAyetiEkrani> {
             Text(t('app_name'), style: GoogleFonts.poppins(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold)),
         ]),
         
-        // SAĞ TARAF: Sadece Gerekli Butonlar
+        // SAĞ TARAF: Butonlar
         Row(
           children: [
-                         // Eğer bugün değilsek "Bugüne Dön" butonu gözüksün
+             // Eğer bugün değilsek "Bugüne Dön" butonu gözüksün
              if (!isToday) 
                IconButton(
                  icon: const Icon(Icons.calendar_today, color: Color(0xFFD4AF37), size: 22),
                  tooltip: t('go_today'),
                  onPressed: buguneGit,
                ),
+
              // Ayarlar
-             IconButton(icon: const Icon(Icons.settings, color: Colors.white54, size: 24), onPressed: ayarlariAc),
-             // Favoriler Listesi
-             IconButton(icon: const Icon(Icons.list_alt, color: Color(0xFFD4AF37), size: 28), onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (context) => const FavorilerEkrani()))),
+             IconButton(
+               icon: const Icon(Icons.settings, color: Colors.white54, size: 24), 
+               onPressed: ayarlariAc
+             ),
+
+             // 👇 2. DEĞİŞİKLİK: Favoriler Butonu (Gidilen Tarihi Yakalama)
+             IconButton(
+               icon: const Icon(Icons.list_alt, color: Color(0xFFD4AF37), size: 28), 
+               onPressed: () async {
+                 // Sayfayı aç ve kapanana kadar bekle (await)
+                 final gelenTarih = await Navigator.push(
+                   context, 
+                   MaterialPageRoute(builder: (context) => const FavorilerEkrani())
+                 );
+
+                 // Eğer favorilerden bir tarih seçip geri döndüyse:
+                 if (gelenTarih != null && gelenTarih is DateTime) {
+                   debugPrint("Favorilerden dönüldü, gidilecek tarih: $gelenTarih");
+                   
+                   setState(() {
+                     // 1. Tarihi güncelle
+                     seciliTarih = gelenTarih;
+                     
+                     // 2. Yükleniyor moduna al
+                     _isLoading = true; 
+                     
+                     // 3. O tarihteki ayeti getir
+                     futureAyet = ayetiGetir(seciliTarih).whenComplete(() {
+                        // İşlem bitince yükleniyor'u kapat
+                        setState(() => _isLoading = false);
+                     });
+                   });
+                 }
+               }
+             ),
           ],
         ),
       ],
     );
   }
-  
 
 Widget _buildAyetContent() {
     return FutureBuilder<AyetModel>(
@@ -861,10 +866,6 @@ Widget _buildAyetContent() {
         if (snapshot.hasData) {
           final ayet = snapshot.data!;
           
-          final gunFarki = DateTime.now().difference(seciliTarih).inDays;
-          if (!isPremiumUser && gunFarki > 3) {
-            return _buildPremiumLockScreen();
-          }
           
           _mevcutAyetFavoriMi(ayet);
           
@@ -887,30 +888,6 @@ Widget _buildAyetContent() {
       },
     );
   }
-  Widget _buildPremiumLockScreen() {
-    return Center( // <-- SizedBox.expand yerine Center kullandık (Çökme Önleyici)
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          const Icon(Icons.lock_clock, size: 80, color: Color(0xFFD4AF37)),
-          const SizedBox(height: 20),
-          Text(t('premium_locked'), style: const TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.bold)),
-          const SizedBox(height: 10),
-          Text(t('premium_desc'), textAlign: TextAlign.center, style: const TextStyle(color: Colors.white60)),
-          const SizedBox(height: 30),
-          ElevatedButton(
-            onPressed: premiumAc, 
-            style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFFD4AF37), 
-              foregroundColor: Colors.black,
-              padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 12)
-            ), 
-            child: Text(t('get_premium'), style: const TextStyle(fontWeight: FontWeight.bold))
-          )
-        ],
-      ),
-    );
-  }
 
   // --- EKSİK OLAN PARÇA BU ---
   Widget _buildDateNavigation() {
@@ -930,7 +907,10 @@ Widget _buildAyetContent() {
           // GERİ GİT BUTONU (<)
           IconButton(
             icon: const Icon(Icons.arrow_back_ios_new, color: Colors.white70, size: 20),
-            onPressed: () => tarihDegistir(-1), // 1 gün geri
+            onPressed: () {
+              HapticFeedback.lightImpact(); // 👈 EKLE: Hafif tık
+              tarihDegistir(-1); 
+            },
             padding: EdgeInsets.zero,
             constraints: const BoxConstraints(),
           ),
@@ -938,7 +918,7 @@ Widget _buildAyetContent() {
           // TARİH YAZISI (Örn: 22 Aralık 2025)
           Row(
             children: [
-              const Icon(Icons.calendar_month, color: Color(0xFFD4AF37), size: 16),
+              //const Icon(Icons.calendar_month, color: Color(0xFFD4AF37), size: 16),
               const SizedBox(width: 8),
               Text(
                 DateFormat('d MMMM yyyy', currentLanguage == 'en' ? 'en_US' : 'tr_TR').format(seciliTarih),
@@ -954,8 +934,10 @@ Widget _buildAyetContent() {
           // İLERİ GİT BUTONU (>)
           IconButton(
             icon: Icon(Icons.arrow_forward_ios, color: isToday ? Colors.white10 : Colors.white70, size: 20),
-            // Eğer bugünse buton çalışmasın (null), değilse 1 gün ileri
-            onPressed: isToday ? null : () => tarihDegistir(1),
+            onPressed: isToday ? null : () {
+               HapticFeedback.lightImpact(); // 👈 EKLE: Hafif tık
+               tarihDegistir(1);
+            },
             padding: EdgeInsets.zero,
             constraints: const BoxConstraints(),
           ),
@@ -971,17 +953,37 @@ Widget _buildAyetContent() {
     return Container(
       width: double.infinity,
       decoration: BoxDecoration(
-        color: const Color(0xFF1E293B),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: const Color(0xFFD4AF37).withValues(alpha: 0.3), width: 1),
+        // 1. ARKA PLAN: Dümdüz renk yerine hafif geçişli (Gradyan) renk
+        // Bu, karta derinlik ve 3 boyut hissi katar.
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            const Color(0xFF1E293B).withValues(alpha: 0.9), // Sol üst biraz daha açık
+            const Color(0xFF0F172A).withValues(alpha: 0.9), // Sağ alt daha koyu
+          ],
+        ),
+        borderRadius: BorderRadius.circular(25),
+        border: Border.all(
+          color: Colors.white.withValues(alpha: 0.1), // %10 görünürlükte beyaz
+          width: 1,
+        ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.3),
+            color: const Color(0xFFD4AF37).withValues(alpha: 0.1), // Çok hafif altın ışıltısı
+            blurRadius: 20, // Işığı iyice yay (Yumuşak olsun)
+            spreadRadius: 0,
+            offset: const Offset(0, 4),
+          ),
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.3), // Bir de siyah gölge (Derinlik için)
             blurRadius: 10,
-            offset: const Offset(0, 5),
+            offset: const Offset(0, 10),
           ),
         ],
       ),
+
+
       child: SingleChildScrollView(
         padding: const EdgeInsets.all(25),
         child: Column(
@@ -1028,7 +1030,7 @@ Widget _buildAyetContent() {
               style: GoogleFonts.amiri(
                 fontSize: fontSizeMultiplier + 12,
                 color: const Color(0xFFD4AF37),
-                height: 1.6,
+                height: 2.0,
               ),
               textAlign: TextAlign.center,
               textDirection: TextDirection.rtl,
@@ -1044,7 +1046,7 @@ Widget _buildAyetContent() {
               style: GoogleFonts.poppins(
                 fontSize: fontSizeMultiplier,
                 color: Colors.white,
-                height: 1.6,
+                height: 1.5,
               ),
               textAlign: TextAlign.center,
             ),
@@ -1122,12 +1124,36 @@ Widget _buildAyetContent() {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceEvenly,
       children: [
-        _actionButton(isFavorited ? Icons.bookmark : Icons.bookmark_border, t('save'), () => _favoriyeEkleCikar(ayet), iconColor: isFavorited ? const Color(0xFFD4AF37) : Colors.white70),
-        Container(
-          height: 70, width: 70, decoration: const BoxDecoration(color: Color(0xFFD4AF37), shape: BoxShape.circle),
-          child: IconButton(icon: const Icon(Icons.share, color: Color(0xFF0F172A), size: 30), onPressed: () => _resimliPaylas(ayet)),
+        // KAYDET BUTONU
+        _actionButton(
+          isFavorited ? Icons.bookmark : Icons.bookmark_border, 
+          t('save'), 
+          () => _favoriyeEkleCikar(ayet), // Zaten içinde titreşim var
+          iconColor: isFavorited ? const Color(0xFFD4AF37) : Colors.white70
         ),
-        _actionButton(isPlaying ? Icons.pause : Icons.play_arrow_outlined, isPlaying ? t('stop') : t('listen'), () => sesiCalVeyaDurdur(ayet.sesDosyasiUrl)),
+
+        // PAYLAŞ BUTONU (ORTADAKİ BÜYÜK)
+        Container(
+          height: 70, width: 70, 
+          decoration: const BoxDecoration(color: Color(0xFFD4AF37), shape: BoxShape.circle),
+          child: IconButton(
+            icon: const Icon(Icons.share, color: Color(0xFF0F172A), size: 30), 
+            onPressed: () {
+               HapticFeedback.heavyImpact(); // 👈 EKLE: Güçlü vuruş (Önemli işlem)
+               _resimliPaylas(ayet);
+            }
+          ),
+        ),
+
+        // DİNLE BUTONU
+        _actionButton(
+          isPlaying ? Icons.pause : Icons.play_arrow_outlined, 
+          isPlaying ? t('stop') : t('listen'), 
+          () {
+            HapticFeedback.selectionClick(); // 👈 EKLE: Tık sesi hissi
+            sesiCalVeyaDurdur(ayet.sesDosyasiUrl);
+          }
+        ),
       ],
     );
   }
@@ -1293,15 +1319,6 @@ class _AyarlarEkraniState extends State<AyarlarEkrani> {
     setState(() { fontSizeMultiplier = yeniBoyut; });
   }
 
-  void _premiumSifirla() async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setBool('isPremium', false); 
-    isPremiumUser = false; 
-    setState(() {}); 
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text("Premium iptal edildi (Test Modu)."), backgroundColor: Colors.redAccent)
-    );
-  }
 
   Widget _dilSecenek(String dilKod, String dilAd) {
     bool secili = currentLanguage == dilKod;
@@ -1357,48 +1374,7 @@ class _AyarlarEkraniState extends State<AyarlarEkrani> {
             ),
             
             const Spacer(),
-            
-            GestureDetector(
-              onTap: () {
-                if(!isPremiumUser) {
-                  Navigator.push(context, MaterialPageRoute(builder: (context) => const PremiumEkrani())).then((_) => setState((){}));
-                } else {
-                  _premiumSifirla();
-                }
-              },
-              child: Container(
-                width: double.infinity,
-                padding: const EdgeInsets.all(15),
-                decoration: BoxDecoration(
-                  color: isPremiumUser ? Colors.redAccent.withValues(alpha: 0.1) : const Color(0xFFD4AF37).withValues(alpha: 0.1),
-                  border: Border.all(color: isPremiumUser ? Colors.redAccent : const Color(0xFFD4AF37)),
-                  borderRadius: BorderRadius.circular(15)
-                ),
-                child: Row(
-                  children: [
-                    Icon(
-                      isPremiumUser ? Icons.workspace_premium : Icons.workspace_premium, 
-                      color: isPremiumUser ? Colors.redAccent : const Color(0xFFD4AF37), 
-                      size: 30
-                    ),
-                    const SizedBox(width: 15),
-                    Expanded(
-                      child: Text(
-                        isPremiumUser ? t('prem_active') : t('prem_title'),
-                        style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16)
-                      ),
-                    ),
-                    Icon(
-                      isPremiumUser ? Icons.check_circle_outline : Icons.arrow_forward_ios, 
-                      color: isPremiumUser ? Colors.redAccent : const Color(0xFFD4AF37), 
-                      size: isPremiumUser ? 24 : 16
-                    )
-                  ],
-                ),
-              ),
-            ),
-            const SizedBox(height: 20),
-          ],
+          ]  
         ),
       ),
     );
@@ -1423,7 +1399,6 @@ class FavorilerEkrani extends StatefulWidget {
   State<FavorilerEkrani> createState() => _FavorilerEkraniState();
 }
 class _FavorilerEkraniState extends State<FavorilerEkrani> {
-  final ScreenshotController _screenshotController = ScreenshotController();
   
   // Tüm favoriler (Gizli olanlar dahil hepsi burada durur)
   List<AyetModel> tumFavoriler = []; 
@@ -1460,101 +1435,18 @@ class _FavorilerEkraniState extends State<FavorilerEkrani> {
 
   // 👇 2. FİLTRELEME MANTIĞI BURADA
   List<AyetModel> _getGosterilecekListe() {
-    if (isPremiumUser) {
-      return tumFavoriler; // Premium ise hepsi serbest
-    }
+    //if (isPremiumUser) {
+    //  return tumFavoriler; // Premium ise hepsi serbest
+    //}
 
     // Premium değilse: Sadece son 4 günün (Bugün + 3 geçmiş) ayetlerini bul
-    List<int> izinliIdler = [];
-    DateTime bugun = DateTime.now();
-    for (int i = 0; i <= 3; i++) {
-      int dayOfYear = int.parse(DateFormat("D").format(bugun.subtract(Duration(days: i))));
-      int id = (dayOfYear % 6236) + 1;
-      izinliIdler.add(id);
-    }
-
+    
     // Listeyi filtrele: Sadece izinli ID'leri göster
-    return tumFavoriler.where((ayet) => izinliIdler.contains(ayet.id)).toList();
+    return tumFavoriler;
   }
 
   // Paylaşım ve Kart Tasarımları (Aynı kalıyor)
-  Widget _paylasimKartiOlustur(AyetModel veri) {
-    // ... (Önceki kodun aynısı) ...
-    String gosterilecekMeal = currentLanguage == 'en' ? veri.ingilizce : veri.turkce;
-    return Material(
-      color: Colors.transparent,
-      child: Container(
-        width: 400, height: 500, padding: const EdgeInsets.all(30),
-        decoration: BoxDecoration(color: const Color(0xFF0F172A), borderRadius: BorderRadius.circular(20), border: Border.all(color: const Color(0xFFD4AF37), width: 2)),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const Icon(Icons.menu_book_rounded, size: 40, color: Color(0xFFD4AF37)),
-            const SizedBox(height: 20),
-            Flexible(flex: 2, child: AutoSizeText(veri.arapca, style: GoogleFonts.amiri(fontSize: 24, color: const Color(0xFFD4AF37)), textAlign: TextAlign.center, textDirection: TextDirection.rtl, minFontSize: 14, maxLines: 4)),
-            const SizedBox(height: 20),
-            const Divider(color: Colors.white24, thickness: 1, indent: 50, endIndent: 50),
-            const SizedBox(height: 20),
-            Expanded(flex: 4, child: Center(child: AutoSizeText(gosterilecekMeal, style: GoogleFonts.poppins(fontSize: 20, color: Colors.white, height: 1.5, fontStyle: FontStyle.italic), textAlign: TextAlign.center, minFontSize: 12, maxLines: 12, overflow: TextOverflow.ellipsis))),
-            const SizedBox(height: 20),
-            Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [Text("Kuran Günlüğü", style: GoogleFonts.poppins(fontSize: 12, color: Colors.white54)), Text("${veri.sureAdi}, ${veri.ayetNo}", style: const TextStyle(color: Color(0xFFD4AF37), fontWeight: FontWeight.bold))])
-          ],
-        ),
-      ),
-    );
-  }
 
-  Future<void> _resimliPaylas(AyetModel ayet) async {
-    // ... (Önceki kodun aynısı) ...
-    // Kısaca: Screenshot alıp paylaşma kodu
-     if (mounted) {
-      showDialog(
-        context: context,
-        barrierDismissible: false,
-        builder: (BuildContext context) {
-          return const Dialog(
-            backgroundColor: Color(0xFF1E293B),
-            child: Padding(
-              padding: EdgeInsets.all(20.0),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                   CircularProgressIndicator(color: Color(0xFFD4AF37)),
-                   SizedBox(width: 20),
-                   Text("Hazırlanıyor...", style: TextStyle(color: Colors.white)),
-                ],
-              ),
-            ),
-          );
-        },
-      );
-    }
-
-    try {
-      final Uint8List imageBytes = await _screenshotController.captureFromWidget(
-        _paylasimKartiOlustur(ayet),
-        delay: const Duration(milliseconds: 100),
-        context: context,
-        pixelRatio: 3.0,
-      );
-
-      if (!mounted) return;
-      Navigator.pop(context);
-
-      final directory = await getTemporaryDirectory();
-      final imagePath = await File('${directory.path}/ayet_share.png').create();
-      await imagePath.writeAsBytes(imageBytes);
-
-      String metin = currentLanguage == 'en' ? ayet.ingilizce : ayet.turkce;
-      await Share.shareXFiles(
-        [XFile(imagePath.path)],
-        text: "$metin\n\n🌙 ${t('app_name')}",
-      );
-
-    } catch (e) {
-      if (mounted && Navigator.canPop(context)) Navigator.pop(context);
-    }
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -1562,7 +1454,6 @@ class _FavorilerEkraniState extends State<FavorilerEkrani> {
     List<AyetModel> gosterilecekListe = _getGosterilecekListe();
     
     // Kaç tane gizlediğimizi hesapla
-    int gizliSayisi = tumFavoriler.length - gosterilecekListe.length;
 
     return Scaffold(
       appBar: AppBar(title: Text(t('list_title'), style: const TextStyle(color: Color(0xFFD4AF37))), backgroundColor: Colors.transparent, iconTheme: const IconThemeData(color: Colors.white)),
@@ -1571,37 +1462,11 @@ class _FavorilerEkraniState extends State<FavorilerEkrani> {
         ? Center(child: Text(t('list_empty'), style: const TextStyle(color: Colors.white54))) 
         : ListView.builder(
             // Eğer gizli ayet varsa en alta fazladan 1 kutu (Kilit Kutusu) ekle
-            itemCount: gosterilecekListe.length + (gizliSayisi > 0 ? 1 : 0),
+            itemCount: gosterilecekListe.length,
             itemBuilder: (context, index) {
               
               // 👇 EN SONDAKİ KİLİTLİ KUTU TASARIMI
-              if (index == gosterilecekListe.length) {
-                return Container(
-                  margin: const EdgeInsets.all(10),
-                  padding: const EdgeInsets.all(20),
-                  decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: 0.05),
-                    borderRadius: BorderRadius.circular(15),
-                    border: Border.all(color: Colors.white10),
-                  ),
-                  child: Column(
-                    children: [
-                      const Icon(Icons.lock, color: Colors.white30, size: 40),
-                      const SizedBox(height: 10),
-                      Text(
-                        "$gizliSayisi ${t('premium_locked')}", // "5 Geçmiş Kilitli" gibi
-                        style: const TextStyle(color: Colors.white70, fontWeight: FontWeight.bold),
-                      ),
-                      const SizedBox(height: 5),
-                      Text(
-                        t('premium_desc'), // "Görmek için Premium ol"
-                        textAlign: TextAlign.center,
-                        style: const TextStyle(color: Colors.white30, fontSize: 12),
-                      ),
-                    ],
-                  ),
-                );
-              }
+              
 
               // 👇 NORMAL AYET KARTI
               var a = gosterilecekListe[index];
@@ -1619,11 +1484,20 @@ class _FavorilerEkraniState extends State<FavorilerEkrani> {
                     child: Text(metin, maxLines: 2, overflow: TextOverflow.ellipsis, style: const TextStyle(color: Colors.white70)),
                   ),
                   trailing: IconButton(icon: const Icon(Icons.delete, color: Colors.redAccent), onPressed: () => _sil(index, a)),
-                  onTap: () => _resimliPaylas(a),
+                  onTap: () {
+                    // 1. Ayetin ID'sinden o günün tarihini hesapla
+                    // Mantık: Yılın başı + (AyetID - 1) gün = O Ayetin Günü
+                    DateTime yilBasi = DateTime(DateTime.now().year, 1, 1);
+                    DateTime gidilecekTarih = yilBasi.add(Duration(days: a.id - 2));
+
+                    // 2. Ekranı kapat ve bu tarihi geriye (Ana Ekrana) fırlat
+                    Navigator.pop(context, gidilecekTarih);
+                  },
                 ),
               );
             }
           ),
-    );
-  }
-}
+        );
+      }
+    }
+  
