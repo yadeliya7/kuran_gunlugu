@@ -19,10 +19,9 @@ import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:timezone/data/latest.dart' as tz;
 import 'package:timezone/timezone.dart' as tz;
 import 'data.dart'; // <-- Yeni oluşturduğumuz dosyayı çağırıyoruz
-
 // --- GLOBAL AYARLAR ---
 String currentLanguage = 'tr'; 
-double fontSizeMultiplier = 1.0; 
+double fontSizeMultiplier = 16.0; 
 bool isPremiumUser = false; 
 
 // --- SÖZLÜK ---
@@ -64,6 +63,14 @@ final Map<String, Map<String, String>> dictionary = {
     'notif_title': 'Hayırlı Sabahlar ☀️',
     'notif_body': 'Bugünün ayeti seni bekliyor. Okumak ister misin?',
     'test_msg': 'Bildirimler başarıyla çalışıyor! 🚀',
+    'note_title': 'Günlük Notum 📝',
+    'note_hint': 'Bu ayet sana ne hissettirdi?',
+    // ignore: equal_keys_in_map
+    'save': 'KAYDET',
+    'your_note': 'Notun:',
+    'my_note': 'Notum:',
+    'add_note': 'Not Ekle',
+    'edit_note': 'Notu Düzenle',
   },
   'en': {
     'app_name': 'Quran Diary',
@@ -102,6 +109,14 @@ final Map<String, Map<String, String>> dictionary = {
     'notif_title': 'Good Morning ☀️',
     'notif_body': 'Verse of the day is ready. Would you like to read?',
     'test_msg': 'Notifications work perfectly! 🚀',
+    'note_title': 'My Daily Note 📝',
+    'note_hint': 'How did this verse make you feel?',
+    // ignore: equal_keys_in_map
+    'save': 'SAVE',
+    'your_note': 'Your Note:',
+    'my_note': 'My Note:',
+    'add_note': 'Add Note',
+    'edit_note': 'Edit Note',
   }
 };
 
@@ -178,7 +193,7 @@ class BildirimServisi {
       }
 
       // 👇 İŞTE EKSİK OLAN SATIR buydu 👇
-      final tz.TZDateTime baslangicZamani = _sonrakiSabah(9, 00);
+      final tz.TZDateTime baslangicZamani = _sonrakiSabah(9, 43);
 
       debugPrint("📅 7 Günlük Veritabanı Planı Yapılıyor...");
 
@@ -320,7 +335,7 @@ Future<void> _baslangicYuklemeleri() async {
       if (mounted) {
         setState(() {
           currentLanguage = prefs.getString('language') ?? 'tr';
-          fontSizeMultiplier = prefs.getDouble('fontSize') ?? 1.0;
+          fontSizeMultiplier = prefs.getDouble('fontSize') ?? 18.0;
           isPremiumUser = prefs.getBool('isPremium') ?? false;
         });
       }
@@ -374,6 +389,17 @@ Future<void> _baslangicYuklemeleri() async {
             ),
             const SizedBox(height: 30),
             Text(t('app_name'), style: GoogleFonts.poppins(fontSize: 28, fontWeight: FontWeight.bold, color: Colors.white)),
+            const SizedBox(height: 15),
+            Text(
+              t('splash_text'), // "Bunlar hikmet dolu..."
+              textAlign: TextAlign.center,
+              style: GoogleFonts.amiri( // Biraz daha klasik/estetik dursun
+                fontSize: 18, 
+                color: Colors.white70,
+                fontStyle: FontStyle.italic,
+                height: 1.5
+              ),
+            ),
             const SizedBox(height: 50),
             const SizedBox(width: 30, height: 30, child: CircularProgressIndicator(strokeWidth: 2, color: Color(0xFFD4AF37))),
           ],
@@ -400,9 +426,7 @@ class _GununAyetiEkraniState extends State<GununAyetiEkrani> {
   // Not işlemleri için gerekli değişkenler
   String? kaydedilenNot; // Ekranda göstereceğimiz not
   final TextEditingController _notController = TextEditingController(); // Yazı yazma kutusu kontrolcüsü
- 
   @override
-
   void initState() {
     super.initState();
     // 1. Değişkenleri sıfırla (Garanti olsun)
@@ -583,14 +607,14 @@ class _GununAyetiEkraniState extends State<GununAyetiEkrani> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text("Günlük Notum 📝", style: TextStyle(color: Color(0xFFD4AF37), fontSize: 18, fontWeight: FontWeight.bold)),
+            Text(t('note_title'), style: const TextStyle(color: Color(0xFFD4AF37), fontSize: 18, fontWeight: FontWeight.bold)),
             const SizedBox(height: 15),
             TextField(
               controller: _notController,
               maxLines: 4,
               style: const TextStyle(color: Colors.white),
               decoration: InputDecoration(
-                hintText: "Bu ayet sana ne hissettirdi?",
+                hintText: t('note_hint'),
                 hintStyle: const TextStyle(color: Colors.white30),
                 filled: true,
                 fillColor: Colors.black26,
@@ -606,7 +630,7 @@ class _GununAyetiEkraniState extends State<GununAyetiEkrani> {
                   Navigator.pop(context); // Pencreyi kapat
                 },
                 style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFFD4AF37), foregroundColor: Colors.black),
-                child: const Text("KAYDET", style: TextStyle(fontWeight: FontWeight.bold)),
+                child: Text(t('save'), style: const TextStyle(fontWeight: FontWeight.bold)),
               ),
             ),
           ],
@@ -939,89 +963,161 @@ Widget _buildAyetContent() {
       ),
     );
   }
-
-
   Widget _buildAyetCard(AyetModel veri) {
     String gosterilecekMeal = currentLanguage == 'en' ? veri.ingilizce : veri.turkce;
-    return Material(
-      color: const Color(0xFF0F172A),
-      child: Container(
-        width: double.infinity,
-        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
-        decoration: BoxDecoration(
-          color: const Color(0xFF1E293B), 
-          borderRadius: BorderRadius.circular(30), 
-          border: Border.all(color: const Color(0xFFD4AF37).withValues(alpha: 0.1))
-        ),
-        child: SingleChildScrollView(
-          child: Column(
-            children: [
-              Icon(Icons.auto_stories, color: const Color(0xFFD4AF37).withValues(alpha: 0.5), size: 30),
-              const SizedBox(height: 20),
-              Text(t('today_ayah'), style: TextStyle(color: const Color(0xFFD4AF37).withValues(alpha: 0.8), fontSize: 12, fontWeight: FontWeight.bold, letterSpacing: 2)),
-              const SizedBox(height: 20),
-              Text(veri.arapca, textAlign: TextAlign.center, textDirection: TextDirection.rtl, style: GoogleFonts.amiri(fontSize: 28 * fontSizeMultiplier, color: const Color(0xFFD4AF37), height: 2.2)),
-              const SizedBox(height: 25),
-              Divider(color: Colors.white.withValues(alpha: 0.1), thickness: 1, indent: 40, endIndent: 40),
-              const SizedBox(height: 25),
-              // 👇 YENİ EKLENEN KISIM 👇
-              AutoSizeText(
-                gosterilecekMeal,
-                textAlign: TextAlign.center,
-                style: GoogleFonts.poppins(
-                  fontSize: 22 * fontSizeMultiplier, // Başlangıç boyutu (Biraz büyüttüm)
-                  height: 1.5,
-                  color: Colors.white
-                ),
-                // 👇 SİHİRLİ AYARLAR BURADA 👇
-                minFontSize: 12, // "Sığmazsan 12'ye kadar küçül"
-                maxLines: 12,    // "En fazla 12 satır kapla"
-                overflow: TextOverflow.ellipsis, // "Hala sığmazsan üç nokta koy"
-              ),
-              // 👆 👆 👆
-              const SizedBox(height: 20),
-              // ... (Üstteki kodlar: Arapça, Meal vs.) ...
 
-            // 👇 EĞER NOT VARSA BURADA GÖSTER 👇
+    if (fontSizeMultiplier < 12) fontSizeMultiplier = 18.0;
+
+    return Container(
+      width: double.infinity,
+      decoration: BoxDecoration(
+        color: const Color(0xFF1E293B),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: const Color(0xFFD4AF37).withValues(alpha: 0.3), width: 1),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.3),
+            blurRadius: 10,
+            offset: const Offset(0, 5),
+          ),
+        ],
+      ),
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.all(25),
+        child: Column(
+          children: [
+            // 👇 YENİ PREMIUM BAŞLIK: ÇİZGİLİ, DİK VE GENİŞ ARALIKLI
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                // Sol taraftaki ince çizgi
+                Container(
+                  width: 30, 
+                  height: 1, 
+                  color: const Color(0xFFD4AF37).withValues(alpha: 0.5)
+                ),
+                
+                const SizedBox(width: 10),
+                
+                Text(
+                  t('today_ayah').toUpperCase(), // HEPSİ BÜYÜK HARF
+                  style: GoogleFonts.poppins(
+                    color: const Color(0xFFD4AF37),
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600, // Biraz dolgun (SemiBold)
+                    letterSpacing: 4.0, // ✨ Harflerin arası açık (Premium hissi veren bu)
+                  ),
+                ),
+
+                const SizedBox(width: 10),
+                
+                // Sağ taraftaki ince çizgi
+                Container(
+                  width: 30, 
+                  height: 1, 
+                  color: const Color(0xFFD4AF37).withValues(alpha: 0.5)
+                ),
+              ],
+            ),
+            
+            const SizedBox(height: 30), // Başlık ile ayet arası biraz daha ferah olsun
+
+            // 1. ARAPÇA METİN
+            Text(
+              veri.arapca,
+              style: GoogleFonts.amiri(
+                fontSize: fontSizeMultiplier + 12,
+                color: const Color(0xFFD4AF37),
+                height: 1.6,
+              ),
+              textAlign: TextAlign.center,
+              textDirection: TextDirection.rtl,
+            ),
+
+            const SizedBox(height: 25),
+            const Divider(color: Colors.white10, thickness: 1),
+            const SizedBox(height: 20),
+
+            // 2. MEAL METNİ
+            Text(
+              gosterilecekMeal,
+              style: GoogleFonts.poppins(
+                fontSize: fontSizeMultiplier,
+                color: Colors.white,
+                height: 1.6,
+              ),
+              textAlign: TextAlign.center,
+            ),
+
+            // 3. NOT GÖSTERİM ALANI
             if (kaydedilenNot != null) ...[
-              const SizedBox(height: 20),
+              const SizedBox(height: 25),
               Container(
                 width: double.infinity,
                 padding: const EdgeInsets.all(15),
                 decoration: BoxDecoration(
-                  color: const Color(0xFFD4AF37).withValues(alpha: 0.1), // Hafif sarı zemin
+                  color: const Color(0xFFD4AF37).withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(15),
                   border: Border.all(color: const Color(0xFFD4AF37).withValues(alpha: 0.3)),
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Row(children: [Icon(Icons.edit_note, color: Color(0xFFD4AF37), size: 16), SizedBox(width: 5), Text("Notun:", style: TextStyle(color: Color(0xFFD4AF37), fontSize: 12, fontWeight: FontWeight.bold))]),
-                    const SizedBox(height: 5),
-                    Text(kaydedilenNot!, style: const TextStyle(color: Colors.white70, fontStyle: FontStyle.italic)),
+                    Row(
+                      children: [
+                        const Icon(Icons.edit_note, color: Color(0xFFD4AF37), size: 18),
+                        const SizedBox(width: 8),
+                        Text(
+                          t('your_note'),
+                          style: TextStyle(
+                            color: const Color(0xFFD4AF37),
+                            fontSize: fontSizeMultiplier - 2,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        )
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      kaydedilenNot!,
+                      style: TextStyle(
+                        color: Colors.white70,
+                        fontSize: fontSizeMultiplier - 2,
+                        fontStyle: FontStyle.italic,
+                        height: 1.4,
+                      ),
+                    ),
                   ],
                 ),
               ),
             ],
-            
-            // 👇 "NOT EKLE" BUTONU 👇
-            const SizedBox(height: 15),
+
+            // 4. BUTON
+            const SizedBox(height: 20),
             TextButton.icon(
               onPressed: () => _notEklePenceresiAc(veri.id),
-              icon: const Icon(Icons.add_comment, color: Colors.white30, size: 18),
-              label: Text(kaydedilenNot == null ? "Not Ekle" : "Notu Düzenle", style: const TextStyle(color: Colors.white30)),
+              icon: const Icon(Icons.add_comment, color: Colors.white30, size: 20),
+              label: Text(
+                kaydedilenNot == null ? t('add_note') : t('edit_note'),
+                style: const TextStyle(color: Colors.white30, fontSize: 14),
+              ),
             ),
 
             const SizedBox(height: 10),
-            // (Burada eski Sure Adı kodu var: Align(...))
-              Align(alignment: Alignment.bottomRight, child: Text("${veri.sureAdi}, ${veri.ayetNo}", style: const TextStyle(color: Color(0xFFD4AF37), fontWeight: FontWeight.bold))),
-            ],
-          ),
+
+            // 5. SURE ADI VE NO
+            Align(
+              alignment: Alignment.bottomRight,
+              child: Text(
+                "${veri.sureAdi}, ${veri.ayetNo}",
+                style: const TextStyle(color: Color(0xFFD4AF37), fontWeight: FontWeight.bold, fontSize: 12),
+              ),
+            ),
+          ],
         ),
       ),
     );
   }
-
   Widget _buildActionButtons(AyetModel ayet) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceEvenly,
@@ -1257,7 +1353,7 @@ class _AyarlarEkraniState extends State<AyarlarEkrani> {
             Container(
               width: double.infinity, padding: const EdgeInsets.all(10),
               decoration: BoxDecoration(color: const Color(0xFF1E293B), borderRadius: BorderRadius.circular(15)),
-              child: Row(mainAxisAlignment: MainAxisAlignment.spaceEvenly, children: [_boyutButonu(t('size_small'), 0.85), _boyutButonu(t('size_medium'), 1.0), _boyutButonu(t('size_large'), 1.25)]),
+              child: Row(mainAxisAlignment: MainAxisAlignment.spaceEvenly, children: [_boyutButonu(t('size_small'), 14.0), _boyutButonu(t('size_medium'), 18.0), _boyutButonu(t('size_large'), 24.0)]),
             ),
             
             const Spacer(),
@@ -1327,112 +1423,105 @@ class FavorilerEkrani extends StatefulWidget {
   State<FavorilerEkrani> createState() => _FavorilerEkraniState();
 }
 class _FavorilerEkraniState extends State<FavorilerEkrani> {
-  // 👇 1. FOTOĞRAF MAKİNESİNİ BURAYA DA EKLEDİK
   final ScreenshotController _screenshotController = ScreenshotController();
   
-  List<AyetModel> favoriler = [];
+  // Tüm favoriler (Gizli olanlar dahil hepsi burada durur)
+  List<AyetModel> tumFavoriler = []; 
 
   @override
   void initState() { super.initState(); _favorileriYukle(); }
 
+  // 👇 1. YÜKLEME: HİÇBİR ŞEY SİLMEDEN HEPSİNİ ÇEKİYORUZ
   Future<void> _favorileriYukle() async {
     final prefs = await SharedPreferences.getInstance();
     List<String> list = prefs.getStringList('favoriler') ?? [];
     List<AyetModel> temp = [];
-    for(var s in list) { try { temp.add(AyetModel.fromSavedJson(jsonDecode(s))); } catch(e){ debugPrint('Hata: $e'); } }
-    setState(() { favoriler = temp; });
+    for(var s in list) { 
+      try { temp.add(AyetModel.fromSavedJson(jsonDecode(s))); } catch(e){ debugPrint('Hata: $e'); } 
+    }
+    // Listeyi ters çevirelim ki en son eklenen en üstte olsun
+    setState(() { tumFavoriler = temp.reversed.toList(); });
   }
 
-  Future<void> _sil(int i) async {
+  Future<void> _sil(int index, AyetModel silinecekAyet) async {
     final prefs = await SharedPreferences.getInstance();
-    List<String> list = prefs.getStringList('favoriler') ?? [];
-    if(i < list.length) { list.removeAt(i); await prefs.setStringList('favoriler', list); }
-    setState(() { favoriler.removeAt(i); });
+    
+    // Ana listeden bul ve sil
+    tumFavoriler.removeWhere((element) => element.id == silinecekAyet.id);
+    
+    // Veritabanını güncelle
+    // (Listeyi tekrar düzeltip kaydediyoruz)
+    List<String> kayitListesi = tumFavoriler.map((e) => jsonEncode(e.toJson())).toList();
+    await prefs.setStringList('favoriler', kayitListesi);
+    
+    setState(() {}); // Ekranı yenile
     if(mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(t('removed_msg'))));
   }
 
-  // 👇 2. PAYLAŞIM KARTI TASARIMI (Aynısını buraya kopyaladık)
+  // 👇 2. FİLTRELEME MANTIĞI BURADA
+  List<AyetModel> _getGosterilecekListe() {
+    if (isPremiumUser) {
+      return tumFavoriler; // Premium ise hepsi serbest
+    }
+
+    // Premium değilse: Sadece son 4 günün (Bugün + 3 geçmiş) ayetlerini bul
+    List<int> izinliIdler = [];
+    DateTime bugun = DateTime.now();
+    for (int i = 0; i <= 3; i++) {
+      int dayOfYear = int.parse(DateFormat("D").format(bugun.subtract(Duration(days: i))));
+      int id = (dayOfYear % 6236) + 1;
+      izinliIdler.add(id);
+    }
+
+    // Listeyi filtrele: Sadece izinli ID'leri göster
+    return tumFavoriler.where((ayet) => izinliIdler.contains(ayet.id)).toList();
+  }
+
+  // Paylaşım ve Kart Tasarımları (Aynı kalıyor)
   Widget _paylasimKartiOlustur(AyetModel veri) {
+    // ... (Önceki kodun aynısı) ...
     String gosterilecekMeal = currentLanguage == 'en' ? veri.ingilizce : veri.turkce;
-    
     return Material(
       color: Colors.transparent,
       child: Container(
-        width: 400,
-        height: 500,
-        padding: const EdgeInsets.all(30),
-        decoration: BoxDecoration(
-          color: const Color(0xFF0F172A), 
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: const Color(0xFFD4AF37), width: 2),
-        ),
+        width: 400, height: 500, padding: const EdgeInsets.all(30),
+        decoration: BoxDecoration(color: const Color(0xFF0F172A), borderRadius: BorderRadius.circular(20), border: Border.all(color: const Color(0xFFD4AF37), width: 2)),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             const Icon(Icons.menu_book_rounded, size: 40, color: Color(0xFFD4AF37)),
             const SizedBox(height: 20),
-            
-            Flexible(
-              flex: 2,
-              child: AutoSizeText(
-                veri.arapca,
-                style: GoogleFonts.amiri(fontSize: 24, color: const Color(0xFFD4AF37)),
-                textAlign: TextAlign.center,
-                textDirection: TextDirection.rtl,
-                minFontSize: 14,
-                maxLines: 4,
-              ),
-            ),
-            
+            Flexible(flex: 2, child: AutoSizeText(veri.arapca, style: GoogleFonts.amiri(fontSize: 24, color: const Color(0xFFD4AF37)), textAlign: TextAlign.center, textDirection: TextDirection.rtl, minFontSize: 14, maxLines: 4)),
             const SizedBox(height: 20),
             const Divider(color: Colors.white24, thickness: 1, indent: 50, endIndent: 50),
             const SizedBox(height: 20),
-
-            Expanded(
-              flex: 4,
-              child: Center(
-                child: AutoSizeText(
-                  gosterilecekMeal,
-                  style: GoogleFonts.poppins(fontSize: 20, color: Colors.white, height: 1.5, fontStyle: FontStyle.italic),
-                  textAlign: TextAlign.center,
-                  minFontSize: 12,
-                  maxLines: 12,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ),
-            ),
-
+            Expanded(flex: 4, child: Center(child: AutoSizeText(gosterilecekMeal, style: GoogleFonts.poppins(fontSize: 20, color: Colors.white, height: 1.5, fontStyle: FontStyle.italic), textAlign: TextAlign.center, minFontSize: 12, maxLines: 12, overflow: TextOverflow.ellipsis))),
             const SizedBox(height: 20),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text("Kuran Günlüğü", style: GoogleFonts.poppins(fontSize: 12, color: Colors.white54)),
-                Text("${veri.sureAdi}, ${veri.ayetNo}", style: const TextStyle(color: Color(0xFFD4AF37), fontWeight: FontWeight.bold)),
-              ],
-            )
+            Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [Text("Kuran Günlüğü", style: GoogleFonts.poppins(fontSize: 12, color: Colors.white54)), Text("${veri.sureAdi}, ${veri.ayetNo}", style: const TextStyle(color: Color(0xFFD4AF37), fontWeight: FontWeight.bold))])
           ],
         ),
       ),
     );
   }
 
-  // 👇 3. PAYLAŞMA FONKSİYONU (Aynısını buraya kopyaladık)
   Future<void> _resimliPaylas(AyetModel ayet) async {
-    if (mounted) {
+    // ... (Önceki kodun aynısı) ...
+    // Kısaca: Screenshot alıp paylaşma kodu
+     if (mounted) {
       showDialog(
         context: context,
         barrierDismissible: false,
         builder: (BuildContext context) {
-          return Dialog(
-            backgroundColor: const Color(0xFF1E293B),
+          return const Dialog(
+            backgroundColor: Color(0xFF1E293B),
             child: Padding(
-              padding: const EdgeInsets.all(20.0),
+              padding: EdgeInsets.all(20.0),
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  const CircularProgressIndicator(color: Color(0xFFD4AF37)),
-                  const SizedBox(width: 20),
-                  Text(t('share_loading'), style: const TextStyle(color: Colors.white)),
+                   CircularProgressIndicator(color: Color(0xFFD4AF37)),
+                   SizedBox(width: 20),
+                   Text("Hazırlanıyor...", style: TextStyle(color: Colors.white)),
                 ],
               ),
             ),
@@ -1464,32 +1553,77 @@ class _FavorilerEkraniState extends State<FavorilerEkrani> {
 
     } catch (e) {
       if (mounted && Navigator.canPop(context)) Navigator.pop(context);
-      String metin = currentLanguage == 'en' ? ayet.ingilizce : ayet.turkce;
-      Share.share('"$metin"\n\n🌙 ${t('app_name')}');
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    // Ekranda gösterilecekleri hesapla
+    List<AyetModel> gosterilecekListe = _getGosterilecekListe();
+    
+    // Kaç tane gizlediğimizi hesapla
+    int gizliSayisi = tumFavoriler.length - gosterilecekListe.length;
+
     return Scaffold(
       appBar: AppBar(title: Text(t('list_title'), style: const TextStyle(color: Color(0xFFD4AF37))), backgroundColor: Colors.transparent, iconTheme: const IconThemeData(color: Colors.white)),
-      body: favoriler.isEmpty ? Center(child: Text(t('list_empty'), style: const TextStyle(color: Colors.white54))) : ListView.builder(
-        itemCount: favoriler.length,
-        itemBuilder: (context, index) {
-          var a = favoriler[index];
-          String metin = currentLanguage == 'en' ? a.ingilizce : a.turkce;
-          return Card(
-            color: const Color(0xFF1E293B),
-            child: ListTile(
-              title: Text("${a.sureAdi}, ${a.ayetNo}", style: const TextStyle(color: Color(0xFFD4AF37))),
-              subtitle: Text(metin, maxLines: 2, overflow: TextOverflow.ellipsis, style: const TextStyle(color: Colors.white70)),
-              trailing: IconButton(icon: const Icon(Icons.delete, color: Colors.red), onPressed: () => _sil(index)),
-              // 👇 4. ARTIK YAZIYI DEĞİL, RESİMLİ PAYLAŞ'I ÇAĞIRIYORUZ
-              onTap: () => _resimliPaylas(a), 
-            ),
-          );
-        }
-      ),
+      
+      body: tumFavoriler.isEmpty 
+        ? Center(child: Text(t('list_empty'), style: const TextStyle(color: Colors.white54))) 
+        : ListView.builder(
+            // Eğer gizli ayet varsa en alta fazladan 1 kutu (Kilit Kutusu) ekle
+            itemCount: gosterilecekListe.length + (gizliSayisi > 0 ? 1 : 0),
+            itemBuilder: (context, index) {
+              
+              // 👇 EN SONDAKİ KİLİTLİ KUTU TASARIMI
+              if (index == gosterilecekListe.length) {
+                return Container(
+                  margin: const EdgeInsets.all(10),
+                  padding: const EdgeInsets.all(20),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.05),
+                    borderRadius: BorderRadius.circular(15),
+                    border: Border.all(color: Colors.white10),
+                  ),
+                  child: Column(
+                    children: [
+                      const Icon(Icons.lock, color: Colors.white30, size: 40),
+                      const SizedBox(height: 10),
+                      Text(
+                        "$gizliSayisi ${t('premium_locked')}", // "5 Geçmiş Kilitli" gibi
+                        style: const TextStyle(color: Colors.white70, fontWeight: FontWeight.bold),
+                      ),
+                      const SizedBox(height: 5),
+                      Text(
+                        t('premium_desc'), // "Görmek için Premium ol"
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(color: Colors.white30, fontSize: 12),
+                      ),
+                    ],
+                  ),
+                );
+              }
+
+              // 👇 NORMAL AYET KARTI
+              var a = gosterilecekListe[index];
+              String metin = currentLanguage == 'en' ? a.ingilizce : a.turkce;
+              
+              return Card(
+                color: const Color(0xFF1E293B),
+                margin: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15), side: BorderSide(color: Colors.white.withValues(alpha: 0.1))),
+                child: ListTile(
+                  contentPadding: const EdgeInsets.all(15),
+                  title: Text("${a.sureAdi}, ${a.ayetNo}", style: const TextStyle(color: Color(0xFFD4AF37), fontWeight: FontWeight.bold)),
+                  subtitle: Padding(
+                    padding: const EdgeInsets.only(top: 8.0),
+                    child: Text(metin, maxLines: 2, overflow: TextOverflow.ellipsis, style: const TextStyle(color: Colors.white70)),
+                  ),
+                  trailing: IconButton(icon: const Icon(Icons.delete, color: Colors.redAccent), onPressed: () => _sil(index, a)),
+                  onTap: () => _resimliPaylas(a),
+                ),
+              );
+            }
+          ),
     );
   }
 }

@@ -26,7 +26,34 @@ dev_dependencies:
   flutter_test:
     sdk: flutter
   flutter_lints: ^2.0.0
-  
-
+  flutter_launcher_icons: ^0.13.1
+  flutter_native_splash: ^2.3.1
 flutter:
   uses-material-design: true
+
+flutter_launcher_icons:
+  android: "launcher_icon"
+  ios: true
+  # 👇 YENİ DOSYA ADINI BURAYA YAZ
+  image_path: "assets/icon_splash.png" 
+  
+  adaptive_icon_background: "#0F172A"
+  # 👇 YENİ DOSYA ADINI BURAYA DA YAZ
+  adaptive_icon_foreground: "assets/icon_splash.png" 
+  min_sdk_android: 21
+  remove_alpha_ios: true
+  background_color_ios: "#0F172A"
+  # 👇 EN ALTA YAPIŞTIR
+flutter_native_splash:
+  # Ekranı boyayacak renk (Koyu Lacivert)
+  color: "#0F172A"
+  
+  # Ortaya koyacağı resim (Kırpılmış, şeffaf PNG)
+  image: "assets/icon_splash.png"
+  
+  # Android 12+ için de aynısı
+  android_12:
+    color: "#0F172A"
+    image: "assets/icon_splash.png"
+    # İkonun arka planını da aynı renge boya (Garanti olsun)
+    icon_background_color: "#0F172A"
