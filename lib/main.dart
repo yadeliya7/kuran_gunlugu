@@ -13,13 +13,13 @@ import 'package:share_plus/share_plus.dart';
 import 'package:screenshot/screenshot.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:auto_size_text/auto_size_text.dart';
-import 'dart:typed_data';
 // BİLDİRİM PAKETLERİ
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:timezone/data/latest.dart' as tz;
 import 'package:timezone/timezone.dart' as tz;
 import 'data.dart'; // <-- Yeni oluşturduğumuz dosyayı çağırıyoruz
 import 'package:flutter/services.dart'; // 👈 Titreşim için bu şart
+import 'package:permission_handler/permission_handler.dart'; // 👈 Ekle
 // --- GLOBAL AYARLAR ---
 String currentLanguage = 'tr'; 
 double fontSizeMultiplier = 16.0; 
@@ -67,11 +67,16 @@ final Map<String, Map<String, String>> dictionary = {
     'note_title': 'Günlük Notum 📝',
     'note_hint': 'Bu ayet sana ne hissettirdi?',
     // ignore: equal_keys_in_map
-    'save': 'KAYDET',
+    'save': 'Kaydet',
     'your_note': 'Notun:',
     'my_note': 'Notum:',
     'add_note': 'Not Ekle',
     'edit_note': 'Notu Düzenle',
+    'notif_active': 'Bildirimler Aktif ✅',
+    'notif_inactive': 'Bildirimler Kapalı 🔕',
+    'notif_active_desc': 'Her gün ayetiniz cebinizde.',
+    'notif_inactive_desc': 'Günün ayetini kaçırmamak için lütfen bildirimleri açın.',
+    'turn_on': 'AÇ',
   },
   'en': {
     'app_name': 'Quran Diary',
@@ -118,6 +123,11 @@ final Map<String, Map<String, String>> dictionary = {
     'my_note': 'My Note:',
     'add_note': 'Add Note',
     'edit_note': 'Edit Note',
+    'notif_active': 'Notifications Active ✅',
+    'notif_inactive': 'Notifications Off 🔕',
+    'notif_active_desc': 'Daily verse is in your pocket.',
+    'notif_inactive_desc': 'Please turn on notifications to not miss the daily verse.',
+    'turn_on': 'TURN ON',
   }
 };
 
@@ -163,53 +173,69 @@ class BildirimServisi {
     }
   }
 static Future<void> gunlukBildirimKur() async {
-    // 1. Eski bildirimleri temizle
+    // 1. Önce eski kurulmuş bütün alarmları temizle
     await _notifications.cancelAll();
 
     try {
-      // 2. Yarın sabah 09:00'u hedefle
-      final tz.TZDateTime baslangicZamani = _sonrakiSabah(09, 30);
+      // 2. Sabah (09:30) ve Akşam (20:00) saatlerini hesapla
+      final tz.TZDateTime sabahVakti = _sonrakiZaman(09, 30);
+      final tz.TZDateTime aksamVakti = _sonrakiZaman(20, 00);
 
-      // 3. Mesajları hazırla (Dil seçeneğine göre)
-      // Ayetin kendisini yazmıyoruz, merak ettirici mesaj yazıyoruz.
-      String baslik = currentLanguage == 'en' ? 'Verse of the Day 🌙' : 'Günün Ayeti Hazır 🌙';
-      String icerik = currentLanguage == 'en'
-          ? "Today's verse is waiting for you. Would you like to read it?"
-          : "Bugünün ayeti seni bekliyor. Okumak ister misin?";
-
-      // 4. Gelecek 7 gün için planla
-      for (int i = 0; i < 7; i++) {
-        tz.TZDateTime planlananZaman = baslangicZamani.add(Duration(days: i));
+      // 3. Gelecek 30 gün için planla
+      for (int i = 0; i < 30; i++) {
         
+        // --- A) SABAH BİLDİRİMİ (ID: 0, 1, 2...) ---
         await _notifications.zonedSchedule(
-          i, // Her gün için farklı ID
-          baslik, // <-- "Günün Ayeti Hazır"
-          icerik, // <-- "Seni bekliyor..."
-          planlananZaman,
+          i, 
+          currentLanguage == 'en' ? 'Good Morning ☀️' : 'Hayırlı Sabahlar ☀️',
+          currentLanguage == 'en' 
+             ? "Today's verse is ready. Would you like to read?" 
+             : "Günün ayeti hazır, okumak ister misin?",
+          sabahVakti.add(Duration(days: i)),
           const NotificationDetails(
             android: AndroidNotificationDetails(
-              'kuran_gunlugu_hatirlatici_v1', // Kanal ID'si
+              'kuran_gunlugu_hatirlatici_v1',
               'Günlük Hatırlatıcı',
               channelDescription: 'Günlük okuma hatırlatması',
               importance: Importance.max,
               priority: Priority.high,
-              color: Color(0xFFD4AF37), // Altın Rengi
-              icon: 'notification_icon', // Şeffaf İkonun (drawable klasörüne attığın)
+              color: Color(0xFFD4AF37),
             ),
             iOS: DarwinNotificationDetails(),
           ),
-          
-          // Alarm izni istemeden, pil dostu modda çalış
+          androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
+          uiLocalNotificationDateInterpretation: UILocalNotificationDateInterpretation.absoluteTime,
+        );
+
+        // --- B) AKŞAM BİLDİRİMİ (ID: 100, 101, 102...) ---
+        await _notifications.zonedSchedule(
+          i + 100, // 👈 Çakışmasın diye 100 ekledik
+          currentLanguage == 'en' ? 'Good Evening 🌙' : 'Hayırlı Akşamlar 🌙',
+          currentLanguage == 'en'
+              ? "End your day with peace."
+              : "Günü huzurla kapatmak için bir ayet okumaya ne dersin?",
+          aksamVakti.add(Duration(days: i)),
+          const NotificationDetails(
+            android: AndroidNotificationDetails(
+              'kuran_gunlugu_hatirlatici_v1',
+              'Günlük Hatırlatıcı',
+              channelDescription: 'Günlük okuma hatırlatması',
+              importance: Importance.max,
+              priority: Priority.high,
+              color: Color(0xFFD4AF37),
+            ),
+            iOS: DarwinNotificationDetails(),
+          ),
           androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
           uiLocalNotificationDateInterpretation: UILocalNotificationDateInterpretation.absoluteTime,
         );
       }
-      debugPrint("✅ 7 Günlük 'Seni Bekliyor' Bildirimleri Kuruldu.");
+      debugPrint("✅ Sabah ve Akşam bildirimleri 7 gün için kuruldu.");
     } catch (e) {
       debugPrint("❌ Bildirim hatası: $e");
     }
   }
-  static tz.TZDateTime _sonrakiSabah(int saat, int dakika) {
+  static tz.TZDateTime _sonrakiZaman(int saat, int dakika) {
     final tz.TZDateTime simdi = tz.TZDateTime.now(tz.local);
     tz.TZDateTime planlanan = tz.TZDateTime(tz.local, simdi.year, simdi.month, simdi.day, saat, dakika);
     if (planlanan.isBefore(simdi)) {
@@ -408,10 +434,19 @@ class _GununAyetiEkraniState extends State<GununAyetiEkrani> {
       if (mounted) {
         setState(() {
           // Boş bir setState, ekranı "Kendine gel" diye sarsar.
+          
           debugPrint("Ekran yerleşimi tazelendi 🔄");
         });
       }
     });
+    _audioPlayer.onPlayerComplete.listen((event) {
+      if (mounted) {
+        setState(() {
+          isPlaying = false;
+        });
+      }
+    });
+    // 👆👆👆 EKLEME BİTTİ 👆👆👆
   }
 
   void ayarlariAc() async {
@@ -1105,60 +1140,127 @@ Widget _buildAyetContent() {
 
             // 5. SURE ADI VE NO
             Align(
-              alignment: Alignment.bottomRight,
-              child: Text(
-                "${veri.sureAdi}, ${veri.ayetNo}",
-                style: const TextStyle(color: Color(0xFFD4AF37), fontWeight: FontWeight.bold, fontSize: 12),
-              ),
-            ),
+                  alignment: Alignment.bottomRight,
+                  child: Builder(
+                    builder: (context) {
+                      // 1. Türkçe ismini sözlükten bul
+                      String sureIsmi = veri.sureAdi; 
+                      
+                      if (currentLanguage == 'tr') {
+                        // Eğer haritada varsa Türkçe karşılığını al, yoksa geleni kullan
+                        sureIsmi = SureIsimleri.tr[veri.sureAdi] ?? veri.sureAdi;
+                      }
+
+                      // 2. Ekrana Yazdır
+                      return Text(
+                        currentLanguage == 'tr' 
+                            ? "$sureIsmi , ${veri.ayetNo}. " 
+                            : " $sureIsmi,  ${veri.ayetNo}", 
+                        style: const TextStyle(
+                            color: Color(0xFFD4AF37),
+                            fontWeight: FontWeight.bold,
+                            fontSize: 12),
+                      );
+                    }
+                  ),
+                ),
           ],
         ),
       ),
     );
   }
-  Widget _buildActionButtons(AyetModel ayet) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-      children: [
-        // KAYDET BUTONU
-        _actionButton(
-          isFavorited ? Icons.bookmark : Icons.bookmark_border, 
-          t('save'), 
-          () => _favoriyeEkleCikar(ayet), // Zaten içinde titreşim var
-          iconColor: isFavorited ? const Color(0xFFD4AF37) : Colors.white70
-        ),
-
-        // PAYLAŞ BUTONU (ORTADAKİ BÜYÜK)
-        Container(
-          height: 70, width: 70, 
-          decoration: const BoxDecoration(color: Color(0xFFD4AF37), shape: BoxShape.circle),
-          child: IconButton(
-            icon: const Icon(Icons.share, color: Color(0xFF0F172A), size: 30), 
-            onPressed: () {
-               HapticFeedback.heavyImpact(); // 👈 EKLE: Güçlü vuruş (Önemli işlem)
-               _resimliPaylas(ayet);
-            }
+Widget _buildActionButtons(AyetModel ayet) {
+    // 👇 1. DİKKAT: Dikey boşluğu azalttık (20 -> 5 yaptık)
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 5), 
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          
+          // 1. SOL TARAF (KAYDET)
+          SizedBox(
+            width: 70, // Genişliği de biraz topladık
+            child: GestureDetector(
+              onTap: () => _favoriyeEkleCikar(ayet),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    isFavorited ? Icons.bookmark : Icons.bookmark_border,
+                    color: isFavorited ? const Color(0xFFD4AF37) : Colors.white,
+                    size: 28, // 👇 30 -> 28 yaptık
+                  ),
+                  const SizedBox(height: 4), // Aradaki boşluğu kıstık
+                  Text(
+                    t('save').toUpperCase(),
+                    textAlign: TextAlign.center,
+                    maxLines: 1,
+                    style: TextStyle(
+                      color: isFavorited ? const Color(0xFFD4AF37) : Colors.white,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 10, // 👇 11 -> 10 yaptık (Daha kibar)
+                      letterSpacing: 1.0,
+                    ),
+                  ),
+                ],
+              ),
+            ),
           ),
-        ),
 
-        // DİNLE BUTONU
-        _actionButton(
-          isPlaying ? Icons.pause : Icons.play_arrow_outlined, 
-          isPlaying ? t('stop') : t('listen'), 
-          () {
-            HapticFeedback.selectionClick(); // 👈 EKLE: Tık sesi hissi
-            sesiCalVeyaDurdur(ayet.sesDosyasiUrl);
-          }
-        ),
-      ],
+          // 2. ORTA BUTON (PAYLAŞ)
+          Container(
+            height: 65, width: 65, // 👇 70 -> 60 yaptık (Biraz küçüldü, sığması için)
+            decoration: const BoxDecoration(color: Color(0xFFD4AF37), shape: BoxShape.circle),
+            child: IconButton(
+              // İkonu ortalamak için padding ayarı gerekebilir, o yüzden alignment ekledik
+              alignment: Alignment.center,
+              icon: const Icon(Icons.share, color: Color(0xFF0F172A), size: 26), 
+              onPressed: () {
+                 HapticFeedback.heavyImpact(); 
+                 _resimliPaylas(ayet);
+              }
+            ),
+          ),
+
+          // 3. SAĞ TARAF (DİNLE)
+          SizedBox(
+            width: 70, // Genişliği topladık
+            child: GestureDetector(
+              onTap: () {
+                HapticFeedback.selectionClick();
+                sesiCalVeyaDurdur(ayet.sesDosyasiUrl);
+              },
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    isPlaying ? Icons.pause : Icons.play_arrow_outlined,
+                    color: isPlaying ? const Color(0xFFD4AF37) : Colors.white,
+                    size: 28, // 👇 30 -> 28 yaptık
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    (isPlaying ? t('stop') : t('listen')).toUpperCase(),
+                    textAlign: TextAlign.center,
+                    maxLines: 1,
+                    style: TextStyle(
+                      color: isPlaying ? const Color(0xFFD4AF37) : Colors.white,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 10, // 👇 11 -> 10 yaptık
+                      letterSpacing: 1.0,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+
+        ],
+      ),
     );
   }
-
-  Widget _actionButton(IconData icon, String label, VoidCallback onTap, {Color iconColor = Colors.white70}) {
-    return SizedBox(width: 80, child: Column(children: [IconButton(icon: Icon(icon, color: iconColor), onPressed: onTap), Text(label, style: const TextStyle(color: Colors.white30, fontSize: 10))]));
-  }
-
-  // 👇 Sadece fotoğraf çekmek için kullanılacak özel tasarım
+   // 👇 Sadece fotoğraf çekmek için kullanılacak özel tasarım
   Widget _paylasimKartiOlustur(AyetModel veri) {
     String gosterilecekMeal = currentLanguage == 'en' ? veri.ingilizce : veri.turkce;
     
@@ -1186,11 +1288,12 @@ Widget _buildAyetContent() {
               flex: 2,
               child: AutoSizeText(
                 veri.arapca,
-                style: GoogleFonts.amiri(fontSize: 24, color: const Color(0xFFD4AF37)),
+                style: GoogleFonts.amiri(fontSize: 24, color: const Color(0xFFD4AF37),height: 2.2),
                 textAlign: TextAlign.center,
                 textDirection: TextDirection.rtl,
                 minFontSize: 14,
                 maxLines: 4,
+                
               ),
             ),
             
@@ -1299,19 +1402,58 @@ class AyarlarEkrani extends StatefulWidget {
   @override
   State<AyarlarEkrani> createState() => _AyarlarEkraniState();
 }
-class _AyarlarEkraniState extends State<AyarlarEkrani> {
+
+class _AyarlarEkraniState extends State<AyarlarEkrani> with WidgetsBindingObserver {
+  bool bildirimIzniVar = false;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+    _izinDurumunuKontrolEt();
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      _izinDurumunuKontrolEt();
+    }
+  }
+
+  Future<void> _izinDurumunuKontrolEt() async {
+    var status = await Permission.notification.status;
+    if (mounted) {
+      setState(() {
+        bildirimIzniVar = status.isGranted;
+      });
+    }
+  }
+
+  Future<void> _ayarlariAc() async {
+    await openAppSettings();
+  }
+
   void _dilDegistir(String yeniDil) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString('language', yeniDil);
-    setState(() { currentLanguage = yeniDil; });
+    setState(() {
+      currentLanguage = yeniDil;
+    });
   }
 
   void _boyutDegistir(double yeniBoyut) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setDouble('fontSize', yeniBoyut);
-    setState(() { fontSizeMultiplier = yeniBoyut; });
+    setState(() {
+      fontSizeMultiplier = yeniBoyut;
+    });
   }
-  
 
   Widget _dilSecenek(String dilKod, String dilAd) {
     bool secili = currentLanguage == dilKod;
@@ -1321,9 +1463,12 @@ class _AyarlarEkraniState extends State<AyarlarEkrani> {
         margin: const EdgeInsets.only(bottom: 10),
         padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 12),
         decoration: BoxDecoration(
-          color: secili ? const Color(0xFFD4AF37).withValues(alpha: 0.1) : Colors.transparent,
+          color: secili
+              ? const Color(0xFFD4AF37).withValues(alpha: 0.1)
+              : Colors.transparent,
           borderRadius: BorderRadius.circular(10),
-          border: Border.all(color: secili ? const Color(0xFFD4AF37) : Colors.white12),
+          border: Border.all(
+              color: secili ? const Color(0xFFD4AF37) : Colors.white12),
         ),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -1339,17 +1484,87 @@ class _AyarlarEkraniState extends State<AyarlarEkrani> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text(t('settings_title'), style: const TextStyle(color: Color(0xFFD4AF37))), backgroundColor: Colors.transparent, iconTheme: const IconThemeData(color: Colors.white)),
+      appBar: AppBar(
+          title: Text(t('settings_title'),
+              style: const TextStyle(color: Color(0xFFD4AF37))),
+          backgroundColor: Colors.transparent,
+          iconTheme: const IconThemeData(color: Colors.white)),
       body: Padding(
         padding: const EdgeInsets.all(20.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(t('language'), style: const TextStyle(color: Colors.white54, fontSize: 14)),
+            // 👇 GÜNCELLENMİŞ BİLDİRİM KARTI (Çeviri destekli)
+            Container(
+              padding: const EdgeInsets.all(15),
+              decoration: BoxDecoration(
+                color: bildirimIzniVar
+                    ? Colors.green.withValues(alpha: 0.1)
+                    : Colors.redAccent.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(15),
+                border: Border.all(
+                  color: bildirimIzniVar ? Colors.green : Colors.redAccent,
+                  width: 1,
+                ),
+              ),
+              child: Row(
+                children: [
+                  Icon(
+                    bildirimIzniVar
+                        ? Icons.notifications_active
+                        : Icons.notifications_off,
+                    color: bildirimIzniVar ? Colors.green : Colors.redAccent,
+                    size: 30,
+                  ),
+                  const SizedBox(width: 15),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          bildirimIzniVar
+                              ? t('notif_active') // "Bildirimler Aktif"
+                              : t('notif_inactive'), // "Bildirimler Kapalı"
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 16,
+                          ),
+                        ),
+                        const SizedBox(height: 5),
+                        Text(
+                          bildirimIzniVar
+                              ? t('notif_active_desc')
+                              : t('notif_inactive_desc'),
+                          style:
+                              const TextStyle(color: Colors.white70, fontSize: 12),
+                        ),
+                      ],
+                    ),
+                  ),
+                  if (!bildirimIzniVar)
+                    TextButton(
+                      onPressed: _ayarlariAc,
+                      style: TextButton.styleFrom(
+                        backgroundColor: Colors.redAccent,
+                        foregroundColor: Colors.white,
+                      ),
+                      child: Text(t('turn_on'), style: const TextStyle(fontWeight: FontWeight.bold)), // "AÇ"
+                    ),
+                ],
+              ),
+            ),
+            
+            const SizedBox(height: 30),
+
+            Text(t('language'),
+                style: const TextStyle(color: Colors.white54, fontSize: 14)),
             const SizedBox(height: 10),
             Container(
               padding: const EdgeInsets.all(15),
-              decoration: BoxDecoration(color: const Color(0xFF1E293B), borderRadius: BorderRadius.circular(15)),
+              decoration: BoxDecoration(
+                  color: const Color(0xFF1E293B),
+                  borderRadius: BorderRadius.circular(15)),
               child: Column(
                 children: [
                   _dilSecenek('tr', 'Türkçe'),
@@ -1358,16 +1573,27 @@ class _AyarlarEkraniState extends State<AyarlarEkrani> {
               ),
             ),
             const SizedBox(height: 30),
-            Text(t('font_size'), style: const TextStyle(color: Colors.white54, fontSize: 14)),
+            
+            Text(t('font_size'),
+                style: const TextStyle(color: Colors.white54, fontSize: 14)),
             const SizedBox(height: 10),
             Container(
-              width: double.infinity, padding: const EdgeInsets.all(10),
-              decoration: BoxDecoration(color: const Color(0xFF1E293B), borderRadius: BorderRadius.circular(15)),
-              child: Row(mainAxisAlignment: MainAxisAlignment.spaceEvenly, children: [_boyutButonu(t('size_small'), 14.0), _boyutButonu(t('size_medium'), 18.0), _boyutButonu(t('size_large'), 24.0)]),
+              width: double.infinity,
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                  color: const Color(0xFF1E293B),
+                  borderRadius: BorderRadius.circular(15)),
+              child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                  children: [
+                    _boyutButonu(t('size_small'), 14.0),
+                    _boyutButonu(t('size_medium'), 18.0),
+                    _boyutButonu(t('size_large'), 24.0)
+                  ]),
             ),
-            
+
             const Spacer(),
-          ]  
+          ],
         ),
       ),
     );
@@ -1379,13 +1605,22 @@ class _AyarlarEkraniState extends State<AyarlarEkrani> {
       onTap: () => _boyutDegistir(value),
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 10),
-        decoration: BoxDecoration(color: isSelected ? const Color(0xFFD4AF37) : Colors.transparent, borderRadius: BorderRadius.circular(10), border: Border.all(color: isSelected ? const Color(0xFFD4AF37) : Colors.white24)),
-        child: Text(text, style: TextStyle(color: isSelected ? Colors.black : Colors.white, fontWeight: isSelected ? FontWeight.bold : FontWeight.normal)),
+        decoration: BoxDecoration(
+            color:
+                isSelected ? const Color(0xFFD4AF37) : Colors.transparent,
+            borderRadius: BorderRadius.circular(10),
+            border: Border.all(
+                color: isSelected
+                    ? const Color(0xFFD4AF37)
+                    : Colors.white24)),
+        child: Text(text,
+            style: TextStyle(
+                color: isSelected ? Colors.black : Colors.white,
+                fontWeight: isSelected ? FontWeight.bold : FontWeight.normal)),
       ),
     );
   }
 }
-
 class FavorilerEkrani extends StatefulWidget {
   const FavorilerEkrani({super.key});
   @override
