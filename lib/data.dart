@@ -368,8 +368,8 @@ class YerelVeri {
 class SureIsimleri {
   // API'den gelen isme (Key) karşılık Türkçe ismini (Value) verir
   static const Map<String, String> tr = {
-    "Al-Fatiha": "Fatiha",
-    "Al-Baqarah": "Bakara",
+    "Al-Faatiha": "Fâtiha",
+    "Al-Baqara": "Bakara", // ✅ Düzeltildi
     "Aal-i-Imraan": "Âl-i İmrân",
     "An-Nisaa": "Nisâ",
     "Al-Maaida": "Mâide",
@@ -377,9 +377,9 @@ class SureIsimleri {
     "Al-A'raaf": "A'râf",
     "Al-Anfaal": "Enfâl",
     "At-Tawba": "Tevbe",
-    "Yunus": "Yunus",
+    "Yunus": "Yûnus",
     "Hud": "Hûd",
-    "Yusuf": "Yusuf",
+    "Yusuf": "Yûsuf",
     "Ar-Ra'd": "Ra'd",
     "Ibrahim": "İbrahim",
     "Al-Hijr": "Hicr",
@@ -390,7 +390,7 @@ class SureIsimleri {
     "Taa-Haa": "Tâhâ",
     "Al-Anbiyaa": "Enbiyâ",
     "Al-Hajj": "Hac",
-    "Al-Mu'minoon": "Mü'minûn",
+    "Al-Muminoon": "Mü'minûn", // ✅ Düzeltildi
     "An-Noor": "Nûr",
     "Al-Furqaan": "Furkân",
     "Ash-Shu'araa": "Şuarâ",
@@ -398,12 +398,12 @@ class SureIsimleri {
     "Al-Qasas": "Kasas",
     "Al-Ankaboot": "Ankebût",
     "Ar-Room": "Rûm",
-    "Luqman": "Lokmân",
+    "Luqman": "Lokman",
     "As-Sajda": "Secde",
     "Al-Ahzaab": "Ahzâb",
     "Saba": "Sebe'",
     "Faatir": "Fâtır",
-    "Yaseen": "Yâsin",
+    "Yaseen": "Yâsîn",
     "As-Saaffaat": "Sâffât",
     "Saad": "Sâd",
     "Az-Zumar": "Zümer",
@@ -411,28 +411,28 @@ class SureIsimleri {
     "Fussilat": "Fussilet",
     "Ash-Shura": "Şûrâ",
     "Az-Zukhruf": "Zuhruf",
-    "Ad-Dukhan": "Duhân",
-    "Al-Jathiya": "Câsiye",
+    "Ad-Dukhaan": "Duhân", // ✅ Düzeltildi
+    "Al-Jaathiya": "Câsiye", // ✅ Düzeltildi
     "Al-Ahqaf": "Ahkâf",
     "Muhammad": "Muhammed",
     "Al-Fath": "Fetih",
     "Al-Hujuraat": "Hucurât",
     "Qaaf": "Kâf",
-    "Adh-Dhariyat": "Zâriyat",
+    "Adh-Dhaariyat": "Zâriyat", // ✅ Düzeltildi
     "At-Tur": "Tûr",
     "An-Najm": "Necm",
     "Al-Qamar": "Kamer",
-    "Ar-Rahman": "Rahmân",
-    "Al-Waqi'a": "Vâkıa",
+    "Ar-Rahmaan": "Rahmân", // ✅ Düzeltildi
+    "Al-Waaqia": "Vâkıa", // ✅ Düzeltildi
     "Al-Hadid": "Hadîd",
-    "Al-Mujadila": "Mücâdele",
+    "Al-Mujaadila": "Mücâdele", // ✅ Düzeltildi
     "Al-Hashr": "Haşr",
     "Al-Mumtahana": "Mümtehine",
     "As-Saff": "Saff",
     "Al-Jumu'a": "Cuma",
-    "Al-Munafiqoon": "Münâfikûn",
-    "At-Taghabun": "Tegâbün",
-    "At-Talaq": "Talâk",
+    "Al-Munaafiqoon": "Münâfikûn", // ✅ Düzeltildi
+    "At-Taghaabun": "Tegâbün", // ✅ Düzeltildi
+    "At-Talaaq": "Talâk", // ✅ Düzeltildi
     "At-Tahrim": "Tahrîm",
     "Al-Mulk": "Mülk",
     "Al-Qalam": "Kalem",
@@ -442,46 +442,46 @@ class SureIsimleri {
     "Al-Jinn": "Cin",
     "Al-Muzzammil": "Müzzemmil",
     "Al-Muddaththir": "Müddessir",
-    "Al-Qiyama": "Kıyâmet",
-    "Al-Insaan": "İnsân",
-    "Al-Mursalat": "Mürselât",
+    "Al-Qiyaama": "Kıyâmet", // ✅ Düzeltildi
+    "Al-Insaan": "İnsan",
+    "Al-Mursalaat": "Mürselât", // ✅ Düzeltildi
     "An-Naba": "Nebe",
-    "An-Nazi'at": "Nâziât",
+    "An-Naazi'aat": "Nâziât", // ✅ Düzeltildi
     "Abasa": "Abese",
     "At-Takwir": "Tekvîr",
-    "Al-Infitar": "İnfitâr",
+    "Al-Infitaar": "İnfitâr", // ✅ Düzeltildi
     "Al-Mutaffifin": "Mutaffifîn",
-    "Al-Inshiqaq": "İnşikâk",
-    "Al-Burooj": "Bürûc",
-    "At-Tariq": "Târık",
-    "Al-A'la": "A'lâ",
-    "Al-Ghashiya": "Gâşiye",
+    "Al-Inshiqaaq": "İnşikâk", // ✅ Düzeltildi
+    "Al-Burooj": "Burûc",
+    "At-Taariq": "Târık", // ✅ Düzeltildi
+    "Al-A'laa": "A'lâ", // ✅ Düzeltildi
+    "Al-Ghaashiya": "Gâşiye", // ✅ Düzeltildi
     "Al-Fajr": "Fecr",
     "Al-Balad": "Beled",
     "Ash-Shams": "Şems",
     "Al-Lail": "Leyl",
-    "Ad-Duhaa": "Duhâ",
-    "Ash-Sharh": "İnşirâh",
+    "Ad-Dhuhaa": "Duhâ", // ✅ Düzeltildi
+    "Ash-Sharh": "İnşirah",
     "At-Tin": "Tîn",
     "Al-Alaq": "Alak",
     "Al-Qadr": "Kadir",
     "Al-Bayyina": "Beyyine",
     "Az-Zalzala": "Zilzâl",
-    "Al-Adiyat": "Âdiyât",
-    "Al-Qari'a": "Kâria",
-    "At-Takathur": "Tekâsür",
+    "Al-Aadiyaat": "Âdiyât", // ✅ Düzeltildi
+    "Al-Qaari'a": "Kâria", // ✅ Düzeltildi
+    "At-Takaathur": "Tekâsür", // ✅ Düzeltildi
     "Al-Asr": "Asr",
     "Al-Humaza": "Hümeze",
     "Al-Fil": "Fîl",
     "Quraish": "Kureyş",
-    "Al-Ma'un": "Mâûn",
+    "Al-Maa'un": "Mâûn", // ✅ Düzeltildi
     "Al-Kawthar": "Kevser",
-    "Al-Kafiroon": "Kâfirûn",
+    "Al-Kaafiroon": "Kâfirûn", // ✅ Düzeltildi
     "An-Nasr": "Nasr",
     "Al-Masad": "Tebbet",
-    "Al-Ikhlas": "İhlâs",
+    "Al-Ikhlaas": "İhlâs", // ✅ Düzeltildi
     "Al-Falaq": "Felâk",
-    "An-Naas": "Nâs"
+    "An-Naas": "Nâs",
   };
 
   // Eğer İngilizce ise zaten gelen isim güzel ama "Surah" eklemek isteyebiliriz
