@@ -1263,8 +1263,14 @@ Widget _buildActionButtons(AyetModel ayet) {
    // 👇 Sadece fotoğraf çekmek için kullanılacak özel tasarım
   Widget _paylasimKartiOlustur(AyetModel veri) {
     String gosterilecekMeal = currentLanguage == 'en' ? veri.ingilizce : veri.turkce;
-    
+    String gosterilecekSureIsmi = veri.sureAdi; // Varsayılan (İngilizce)
     // Arka planın koyu ve şık olması için Material ve Container ile sarıyoruz
+    if (currentLanguage == 'tr') {
+      // Türkçe ise haritadan bak, bulamazsan eskisini koy
+      // NOT: SureIsimleri haritasının bu dosyada tanımlı olduğunu varsayıyorum
+      gosterilecekSureIsmi = SureIsimleri.tr[veri.sureAdi] ?? veri.sureAdi;
+    }
+    
     return Material(
       color: Colors.transparent, // Arka plan şeffaf olsun ki Container görünsün
       child: Container(
@@ -1322,7 +1328,10 @@ Widget _buildActionButtons(AyetModel ayet) {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text("Kuran Günlüğü", style: GoogleFonts.poppins(fontSize: 12, color: Colors.white54)),
-                Text("${veri.sureAdi}, ${veri.ayetNo}", style: const TextStyle(color: Color(0xFFD4AF37), fontWeight: FontWeight.bold)),
+                Text(
+                  "$gosterilecekSureIsmi, ${veri.ayetNo}", 
+                  style: const TextStyle(color: Color(0xFFD4AF37), fontWeight: FontWeight.bold)
+                  )
               ],
             )
           ],
