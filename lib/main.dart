@@ -200,10 +200,10 @@ static Future<void> gunlukBildirimKur() async {
         // --- A) SABAH BİLDİRİMİ (Kesinlikle Gidecek) ---
         await _notifications.zonedSchedule(
           i, 
-          currentLanguage == 'en' ? 'Good Morning ☀️' : 'Hayırlı Sabahlar ☀️',
+          currentLanguage == 'en' ? "Today's verse is ready ☀️" : 'Günün ayeti hazır ☀️',
           currentLanguage == 'en' 
-             ? "Today's verse is ready. Would you like to read?" 
-             : "Günün ayeti hazır, okumak ister misin?",
+             ? "Today's verse is waiting for you. Would you like to read?" 
+             : "Bugünün ayeti seni bekliyor, okumak ister misin?",
           sabahVakti.add(Duration(days: i)), 
           const NotificationDetails(
             android: AndroidNotificationDetails(
