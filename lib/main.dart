@@ -173,25 +173,38 @@ class BildirimServisi {
     }
   }
 static Future<void> gunlukBildirimKur() async {
-    // 1. Önce eski kurulmuş bütün alarmları temizle
+    // 1. Önceki tüm planları temizle (Temiz sayfa açıyoruz)
     await _notifications.cancelAll();
 
     try {
-      // 2. Sabah (09:30) ve Akşam (20:00) saatlerini hesapla
-      final tz.TZDateTime sabahVakti = _sonrakiZaman(09, 30);
-      final tz.TZDateTime aksamVakti = _sonrakiZaman(20, 00);
+      final now = tz.TZDateTime.now(tz.local);
+      
+      // SABAH VAKTİ HESABI (Standart)
+      // Eğer saat 09:30'u geçtiyse yarını verir, geçmediyse bugünü verir.
+      tz.TZDateTime sabahVakti = _sonrakiZaman(09, 30);
 
-      // 3. Gelecek 30 gün için planla
+      // AKŞAM VAKTİ HESABI (Akıllı Mod 🧠)
+      // Normalde _sonrakiZaman bize en yakın akşamı verir (Bugün 20:00 veya Yarın 20:00).
+      tz.TZDateTime aksamVakti = _sonrakiZaman(20, 00);
+
+      // KRİTİK KONTROL:
+      // Eğer hesaplanan akşam vakti "BUGÜN" ise, kullanıcı zaten şu an uygulamada olduğu için
+      // bugünün akşam bildirimini atlayıp YARINA erteliyoruz.
+      if (aksamVakti.day == now.day) {
+        aksamVakti = aksamVakti.add(const Duration(days: 1));
+      }
+
+      // 3. Gelecek 30 GÜN için planla
       for (int i = 0; i < 30; i++) {
         
-        // --- A) SABAH BİLDİRİMİ (ID: 0, 1, 2...) ---
+        // --- A) SABAH BİLDİRİMİ (Kesinlikle Gidecek) ---
         await _notifications.zonedSchedule(
           i, 
           currentLanguage == 'en' ? 'Good Morning ☀️' : 'Hayırlı Sabahlar ☀️',
           currentLanguage == 'en' 
              ? "Today's verse is ready. Would you like to read?" 
              : "Günün ayeti hazır, okumak ister misin?",
-          sabahVakti.add(Duration(days: i)),
+          sabahVakti.add(Duration(days: i)), 
           const NotificationDetails(
             android: AndroidNotificationDetails(
               'kuran_gunlugu_hatirlatici_v1',
@@ -207,14 +220,14 @@ static Future<void> gunlukBildirimKur() async {
           uiLocalNotificationDateInterpretation: UILocalNotificationDateInterpretation.absoluteTime,
         );
 
-        // --- B) AKŞAM BİLDİRİMİ (ID: 100, 101, 102...) ---
+        // --- B) AKŞAM BİLDİRİMİ (Bugün Pas Geçildi, Yarından Başlar) ---
         await _notifications.zonedSchedule(
-          i + 100, // 👈 Çakışmasın diye 100 ekledik
+          i + 100, 
           currentLanguage == 'en' ? 'Good Evening 🌙' : 'Hayırlı Akşamlar 🌙',
           currentLanguage == 'en'
               ? "End your day with peace."
               : "Günü huzurla kapatmak için bir ayet okumaya ne dersin?",
-          aksamVakti.add(Duration(days: i)),
+          aksamVakti.add(Duration(days: i)), 
           const NotificationDetails(
             android: AndroidNotificationDetails(
               'kuran_gunlugu_hatirlatici_v1',
@@ -230,7 +243,7 @@ static Future<void> gunlukBildirimKur() async {
           uiLocalNotificationDateInterpretation: UILocalNotificationDateInterpretation.absoluteTime,
         );
       }
-      debugPrint("✅ Sabah ve Akşam bildirimleri 7 gün için kuruldu.");
+      debugPrint("✅ Akıllı Bildirimler Kuruldu: Bugünün akşamı atlandı (kullanıcı aktif).");
     } catch (e) {
       debugPrint("❌ Bildirim hatası: $e");
     }
@@ -427,7 +440,7 @@ class _GununAyetiEkraniState extends State<GununAyetiEkrani> {
     
     // 2. Veriyi çekmeye başla
     futureAyet = ayetiGetir(seciliTarih);
-
+    BildirimServisi.gunlukBildirimKur();
     // 3. SİHİRLİ DOKUNUŞ: Ekran çizildikten hemen sonra bir kez daha yenile.
     // Bu, senin "çık-gir" yapma işlemini kodla taklit eder.
     WidgetsBinding.instance.addPostFrameCallback((_) {
