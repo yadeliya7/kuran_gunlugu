@@ -33,18 +33,22 @@ flutter:
   uses-material-design: true
 
 flutter_launcher_icons:
+  flutter_launcher_icons:
   android: "launcher_icon"
   ios: true
-  # 👇 YENİ DOSYA ADINI BURAYA YAZ
-  image_path: "assets/icon_splash.png" 
   
+  # 1. GENEL AYAR (Android Bunu Kullanacak - Eski Çalışan Ayarın) 🛡️
+  image_path: "assets/icon_splash_kucuk.png"
+  
+  # 2. ANDROID ADAPTIVE AYARLARI 🤖
   adaptive_icon_background: "#0F172A"
-  # 👇 YENİ DOSYA ADINI BURAYA DA YAZ
-  adaptive_icon_foreground: "assets/icon_splash.png" 
+  adaptive_icon_foreground: "assets/icon_splash_kucuk.png"
   min_sdk_android: 21
+
+  # 3. iOS ÖZEL AYARI (Genel ayarı ezer, bunu kullanır) 🍎
+  image_path_ios: "assets/icon_ios.png"
   remove_alpha_ios: true
   background_color_ios: "#0F172A"
-  # 👇 EN ALTA YAPIŞTIR
 flutter_native_splash:
   # Ekranı boyayacak renk (Koyu Lacivert)
   color: "#0F172A"
