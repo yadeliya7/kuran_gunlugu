@@ -368,7 +368,7 @@ class YerelVeri {
 class SureIsimleri {
   // API'den gelen isme (Key) karşılık Türkçe ismini (Value) verir
   static const Map<String, String> tr = {
-    "Al-Faatiha": "Fâtiha",
+    "Al-Faatiha": "Fâtiha ",
     "Al-Baqara": "Bakara", // ✅ Düzeltildi
     "Aal-i-Imraan": "Âl-i İmrân",
     "An-Nisaa": "Nisâ",
