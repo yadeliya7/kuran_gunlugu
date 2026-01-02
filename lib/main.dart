@@ -751,12 +751,13 @@ class _GununAyetiEkraniState extends State<GununAyetiEkrani> {
       // 3. Dosyayı oluştur ve paylaş (Burası aynı)
       final directory = await getTemporaryDirectory();
       final imagePath = await File('${directory.path}/ayet_share.png').create();
+      final box = context.findRenderObject() as RenderBox?;
       await imagePath.writeAsBytes(imageBytes);
-
       String metin = currentLanguage == 'en' ? ayet.ingilizce : ayet.turkce;
       await Share.shareXFiles(
         [XFile(imagePath.path)],
         text: "$metin\n\n🌙 ${t('app_name')}",
+        sharePositionOrigin: box!.localToGlobal(Offset.zero) & box.size,
       );
 
     } catch (e) {
@@ -1248,6 +1249,7 @@ Widget _buildActionButtons(AyetModel ayet) {
               onPressed: () {
                  HapticFeedback.heavyImpact(); 
                  _resimliPaylas(ayet);
+                
               }
             ),
           ),
