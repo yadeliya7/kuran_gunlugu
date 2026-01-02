@@ -20,6 +20,7 @@ import 'package:timezone/timezone.dart' as tz;
 import 'data.dart'; // <-- Yeni oluşturduğumuz dosyayı çağırıyoruz
 import 'package:flutter/services.dart'; // 👈 Titreşim için bu şart
 import 'package:permission_handler/permission_handler.dart'; // 👈 Ekle
+import 'hafiz_yonetimi.dart';
 // --- GLOBAL AYARLAR ---
 String currentLanguage = 'tr'; 
 double fontSizeMultiplier = 16.0; 
@@ -77,6 +78,9 @@ final Map<String, Map<String, String>> dictionary = {
     'notif_active_desc': 'Her gün ayetiniz cebinizde.',
     'notif_inactive_desc': 'Günün ayetini kaçırmamak için lütfen bildirimleri açın.',
     'turn_on': 'AÇ',
+    'reciter_title': 'Seslendiren Hafız',
+    'selected_reciter': 'Seçili Hafız',
+    'select_reciter_title': 'Hafız Seçimi',
   },
   'en': {
     'app_name': 'Quran Diary',
@@ -128,6 +132,9 @@ final Map<String, Map<String, String>> dictionary = {
     'notif_active_desc': 'Daily verse is in your pocket.',
     'notif_inactive_desc': 'Please turn on notifications to not miss the daily verse.',
     'turn_on': 'TURN ON',
+    'reciter_title': 'Reciter',
+    'selected_reciter': 'Selected Reciter',
+    'select_reciter_title': 'Select Reciter',
   }
 };
 
@@ -526,8 +533,11 @@ class _GununAyetiEkraniState extends State<GununAyetiEkrani> {
     int ayetId = (dayOfYear % 6236) + 1; 
     
     // API İsteği: Arapça, Türkçe ve İngilizce aynı anda isteniyor
+    String kalite = HafizYonetimi.getBitrate(HafizYonetimi.secilenHafizKodu);
+    String hafiz = HafizYonetimi.secilenHafizKodu;
+    
     String esasLink = 'https://api.alquran.cloud/v1/ayah/$ayetId/editions/quran-uthmani,tr.yazir,en.sahih';
-    String sesLinki = "https://cdn.islamic.network/quran/audio/128/ar.alafasy/$ayetId.mp3";
+    String sesLinki = "https://cdn.islamic.network/quran/audio/$kalite/$hafiz/$ayetId.mp3";
     try {
       final response = await http.get(Uri.parse(esasLink));
       if (response.statusCode == 200) {
@@ -758,13 +768,19 @@ class _GununAyetiEkraniState extends State<GununAyetiEkrani> {
     }
   }
 
-  void sesiCalVeyaDurdur(String url) async {
+  void sesiCalVeyaDurdur(int ayetId) async {
     try {
       if (isPlaying) { 
         await _audioPlayer.pause(); 
         setState(() => isPlaying = false); 
       } else { 
-        await _audioPlayer.play(UrlSource(url)); 
+        await _audioPlayer.stop(); 
+        await _audioPlayer.release();
+        String kalite = HafizYonetimi.getBitrate(HafizYonetimi.secilenHafizKodu);
+        String hafiz = HafizYonetimi.secilenHafizKodu;
+        String sesLinki = "https://cdn.islamic.network/quran/audio/$kalite/$hafiz/$ayetId.mp3";
+        debugPrint("Çalınan Link: $sesLinki");
+        _audioPlayer.play(UrlSource(sesLinki)); 
         setState(() => isPlaying = true); 
       }
     } catch (e) {
@@ -1242,7 +1258,7 @@ Widget _buildActionButtons(AyetModel ayet) {
             child: GestureDetector(
               onTap: () {
                 HapticFeedback.selectionClick();
-                sesiCalVeyaDurdur(ayet.sesDosyasiUrl);
+                sesiCalVeyaDurdur(ayet.id);
               },
               child: Column(
                 mainAxisSize: MainAxisSize.min,
@@ -1433,6 +1449,9 @@ class _AyarlarEkraniState extends State<AyarlarEkrani> with WidgetsBindingObserv
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     _izinDurumunuKontrolEt();
+    HafizYonetimi.hafizYukle().then((_) {
+      if(mounted) setState(() {});
+    });
   }
 
   @override
@@ -1476,7 +1495,51 @@ class _AyarlarEkraniState extends State<AyarlarEkrani> with WidgetsBindingObserv
       fontSizeMultiplier = yeniBoyut;
     });
   }
-
+  void _hafizSecimMenusuAc() {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: const Color(0xFF1F2125), // Arka plan rengin
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) {
+        return Container(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                t('select_reciter_title'),
+                style: const TextStyle(color: Color(0xFFD4AF37), fontSize: 18, fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 20),
+              // Hafız Listesi
+              ...HafizYonetimi.hafizlar.map((hafiz) {
+                bool seciliMi = HafizYonetimi.secilenHafizKodu == hafiz['kod'];
+                return ListTile(
+                  leading: Icon(
+                    seciliMi ? Icons.radio_button_checked : Icons.radio_button_unchecked,
+                    color: seciliMi ? const Color(0xFFD4AF37) : Colors.white54,
+                  ),
+                  title: Text(
+                    hafiz['isim']!,
+                    style: const TextStyle(color: Colors.white),
+                  ),
+                  onTap: () async {
+                    await HafizYonetimi.hafizKaydet(hafiz['kod']!);
+                    if (mounted) {
+                      Navigator.pop(context); // Menüyü kapat
+                      setState(() {}); // Ekranı yenile ki isim değişsin
+                    }
+                  },
+                );
+              }).toList(),
+            ],
+          ),
+        );
+      },
+    );
+  }
   Widget _dilSecenek(String dilKod, String dilAd) {
     bool secili = currentLanguage == dilKod;
     return GestureDetector(
@@ -1576,7 +1639,37 @@ class _AyarlarEkraniState extends State<AyarlarEkrani> with WidgetsBindingObserv
                 ],
               ),
             ),
-            
+            const SizedBox(height: 30),
+            Text(t('reciter_title'), // t('reciter') gibi bir şey yapabilirsin
+              style: const TextStyle(color: Colors.white54, fontSize: 14)),
+          const SizedBox(height: 10),
+          
+          GestureDetector(
+            onTap: _hafizSecimMenusuAc, // Menüyü açan fonksiyon
+            child: Container(
+              padding: const EdgeInsets.all(15),
+              decoration: BoxDecoration(
+                  color: const Color(0xFF1E293B),
+                  borderRadius: BorderRadius.circular(15)),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(t('selected_reciter'), style: const TextStyle(color: Colors.white54, fontSize: 12)),
+                      const SizedBox(height: 5),
+                      Text(
+                        HafizYonetimi.getSecilenHafizIsmi(), // Şu anki hafız ismi
+                        style: const TextStyle(color: Color(0xFFD4AF37), fontSize: 16, fontWeight: FontWeight.bold),
+                      ),
+                    ],
+                  ),
+                  const Icon(Icons.arrow_forward_ios, color: Colors.white54, size: 18),
+                ],
+              ),
+            ),
+          ),
             const SizedBox(height: 30),
 
             Text(t('language'),
@@ -1613,7 +1706,7 @@ class _AyarlarEkraniState extends State<AyarlarEkrani> with WidgetsBindingObserv
                     _boyutButonu(t('size_large'), 24.0)
                   ]),
             ),
-
+            
             const Spacer(),
           ],
         ),
