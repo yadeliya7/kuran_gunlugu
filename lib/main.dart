@@ -1569,148 +1569,162 @@ class _AyarlarEkraniState extends State<AyarlarEkrani> with WidgetsBindingObserv
   }
 
   @override
-  Widget build(BuildContext context) {
+ Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
           title: Text(t('settings_title'),
               style: const TextStyle(color: Color(0xFFD4AF37))),
           backgroundColor: Colors.transparent,
           iconTheme: const IconThemeData(color: Colors.white)),
-      body: Padding(
-        padding: const EdgeInsets.all(20.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // 👇 GÜNCELLENMİŞ BİLDİRİM KARTI (Çeviri destekli)
-            Container(
-              padding: const EdgeInsets.all(15),
-              decoration: BoxDecoration(
-                color: bildirimIzniVar
-                    ? Colors.green.withValues(alpha: 0.1)
-                    : Colors.redAccent.withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(15),
-                border: Border.all(
-                  color: bildirimIzniVar ? Colors.green : Colors.redAccent,
-                  width: 1,
+      
+      // 👇 1. DEĞİŞİKLİK: BODY'İ SINGLECHILDSCROLLVIEW İÇİNE ALDIK
+      body: SingleChildScrollView(
+        physics: const BouncingScrollPhysics(), // iOS yaylanma efekti
+        
+        child: Padding(
+          padding: const EdgeInsets.all(20.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // 👇 GÜNCELLENMİŞ BİLDİRİM KARTI
+              Container(
+                padding: const EdgeInsets.all(15),
+                decoration: BoxDecoration(
+                  color: bildirimIzniVar
+                      ? Colors.green.withValues(alpha: 0.1)
+                      : Colors.redAccent.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(15),
+                  border: Border.all(
+                    color: bildirimIzniVar ? Colors.green : Colors.redAccent,
+                    width: 1,
+                  ),
+                ),
+                child: Row(
+                  children: [
+                    Icon(
+                      bildirimIzniVar
+                          ? Icons.notifications_active
+                          : Icons.notifications_off,
+                      color: bildirimIzniVar ? Colors.green : Colors.redAccent,
+                      size: 30,
+                    ),
+                    const SizedBox(width: 15),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            bildirimIzniVar
+                                ? t('notif_active')
+                                : t('notif_inactive'),
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 16,
+                            ),
+                          ),
+                          const SizedBox(height: 5),
+                          Text(
+                            bildirimIzniVar
+                                ? t('notif_active_desc')
+                                : t('notif_inactive_desc'),
+                            style: const TextStyle(color: Colors.white70, fontSize: 12),
+                          ),
+                        ],
+                      ),
+                    ),
+                    if (!bildirimIzniVar)
+                      TextButton(
+                        onPressed: _ayarlariAc,
+                        style: TextButton.styleFrom(
+                          backgroundColor: Colors.redAccent,
+                          foregroundColor: Colors.white,
+                        ),
+                        child: Text(t('turn_on'), style: const TextStyle(fontWeight: FontWeight.bold)),
+                      ),
+                  ],
                 ),
               ),
-              child: Row(
-                children: [
-                  Icon(
-                    bildirimIzniVar
-                        ? Icons.notifications_active
-                        : Icons.notifications_off,
-                    color: bildirimIzniVar ? Colors.green : Colors.redAccent,
-                    size: 30,
-                  ),
-                  const SizedBox(width: 15),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          bildirimIzniVar
-                              ? t('notif_active') // "Bildirimler Aktif"
-                              : t('notif_inactive'), // "Bildirimler Kapalı"
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontWeight: FontWeight.bold,
-                            fontSize: 16,
-                          ),
-                        ),
-                        const SizedBox(height: 5),
-                        Text(
-                          bildirimIzniVar
-                              ? t('notif_active_desc')
-                              : t('notif_inactive_desc'),
-                          style:
-                              const TextStyle(color: Colors.white70, fontSize: 12),
-                        ),
-                      ],
-                    ),
-                  ),
-                  if (!bildirimIzniVar)
-                    TextButton(
-                      onPressed: _ayarlariAc,
-                      style: TextButton.styleFrom(
-                        backgroundColor: Colors.redAccent,
-                        foregroundColor: Colors.white,
-                      ),
-                      child: Text(t('turn_on'), style: const TextStyle(fontWeight: FontWeight.bold)), // "AÇ"
-                    ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 30),
-            Text(t('reciter_title'), // t('reciter') gibi bir şey yapabilirsin
-              style: const TextStyle(color: Colors.white54, fontSize: 14)),
-          const SizedBox(height: 10),
-          
-          GestureDetector(
-            onTap: _hafizSecimMenusuAc, // Menüyü açan fonksiyon
-            child: Container(
-              padding: const EdgeInsets.all(15),
-              decoration: BoxDecoration(
-                  color: const Color(0xFF1E293B),
-                  borderRadius: BorderRadius.circular(15)),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+              
+              const SizedBox(height: 30),
+              
+              // HAFIZ SEÇİMİ
+              Text(t('reciter_title'),
+                  style: const TextStyle(color: Colors.white54, fontSize: 14)),
+              const SizedBox(height: 10),
+
+              GestureDetector(
+                onTap: _hafizSecimMenusuAc,
+                child: Container(
+                  padding: const EdgeInsets.all(15),
+                  decoration: BoxDecoration(
+                      color: const Color(0xFF1E293B),
+                      borderRadius: BorderRadius.circular(15)),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Text(t('selected_reciter'), style: const TextStyle(color: Colors.white54, fontSize: 12)),
-                      const SizedBox(height: 5),
-                      Text(
-                        HafizYonetimi.getSecilenHafizIsmi(), // Şu anki hafız ismi
-                        style: const TextStyle(color: Color(0xFFD4AF37), fontSize: 16, fontWeight: FontWeight.bold),
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(t('selected_reciter'), style: const TextStyle(color: Colors.white54, fontSize: 12)),
+                          const SizedBox(height: 5),
+                          Text(
+                            HafizYonetimi.getSecilenHafizIsmi(),
+                            style: const TextStyle(color: Color(0xFFD4AF37), fontSize: 16, fontWeight: FontWeight.bold),
+                          ),
+                        ],
                       ),
+                      const Icon(Icons.arrow_forward_ios, color: Colors.white54, size: 18),
                     ],
                   ),
-                  const Icon(Icons.arrow_forward_ios, color: Colors.white54, size: 18),
-                ],
+                ),
               ),
-            ),
-          ),
-            const SizedBox(height: 30),
+              
+              const SizedBox(height: 30),
 
-            Text(t('language'),
-                style: const TextStyle(color: Colors.white54, fontSize: 14)),
-            const SizedBox(height: 10),
-            Container(
-              padding: const EdgeInsets.all(15),
-              decoration: BoxDecoration(
-                  color: const Color(0xFF1E293B),
-                  borderRadius: BorderRadius.circular(15)),
-              child: Column(
-                children: [
-                  _dilSecenek('tr', 'Türkçe'),
-                  _dilSecenek('en', 'English'),
-                ],
-              ),
-            ),
-            const SizedBox(height: 30),
-            
-            Text(t('font_size'),
-                style: const TextStyle(color: Colors.white54, fontSize: 14)),
-            const SizedBox(height: 10),
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(10),
-              decoration: BoxDecoration(
-                  color: const Color(0xFF1E293B),
-                  borderRadius: BorderRadius.circular(15)),
-              child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              // DİL SEÇİMİ
+              Text(t('language'),
+                  style: const TextStyle(color: Colors.white54, fontSize: 14)),
+              const SizedBox(height: 10),
+              Container(
+                padding: const EdgeInsets.all(15),
+                decoration: BoxDecoration(
+                    color: const Color(0xFF1E293B),
+                    borderRadius: BorderRadius.circular(15)),
+                child: Column(
                   children: [
-                    _boyutButonu(t('size_small'), 14.0),
-                    _boyutButonu(t('size_medium'), 18.0),
-                    _boyutButonu(t('size_large'), 24.0)
-                  ]),
-            ),
-            
-            const Spacer(),
-          ],
+                    _dilSecenek('tr', 'Türkçe'),
+                    _dilSecenek('en', 'English'),
+                  ],
+                ),
+              ),
+              
+              const SizedBox(height: 30),
+              
+              // YAZI BOYUTU
+              Text(t('font_size'),
+                  style: const TextStyle(color: Colors.white54, fontSize: 14)),
+              const SizedBox(height: 10),
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                    color: const Color(0xFF1E293B),
+                    borderRadius: BorderRadius.circular(15)),
+                child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                    children: [
+                      _boyutButonu(t('size_small'), 14.0),
+                      _boyutButonu(t('size_medium'), 18.0),
+                      _boyutButonu(t('size_large'), 24.0)
+                    ]),
+              ),
+
+              // 👇 2. DEĞİŞİKLİK: SPACER'I SİLDİK, YERİNE BOŞLUK KOYDUK
+              // ScrollView içinde Spacer hata verir!
+              const SizedBox(height: 50), 
+            ],
+          ),
         ),
       ),
     );
