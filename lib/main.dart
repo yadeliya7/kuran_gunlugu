@@ -833,7 +833,7 @@ class _GununAyetiEkraniState extends State<GununAyetiEkrani> {
         // SOL TARAF: Logo ve İsim
         Row(children: [
             const Icon(Icons.auto_stories, color: Color(0xFFD4AF37), size: 24),
-            const SizedBox(width: 10),
+            const SizedBox(width: 7),
             Text(t('app_name'), style: GoogleFonts.poppins(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold)),
         ]),
         
