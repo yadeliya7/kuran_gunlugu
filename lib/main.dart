@@ -21,6 +21,7 @@ import 'data.dart'; // <-- Yeni oluşturduğumuz dosyayı çağırıyoruz
 import 'package:flutter/services.dart'; // 👈 Titreşim için bu şart
 import 'package:permission_handler/permission_handler.dart'; // 👈 Ekle
 import 'hafiz_yonetimi.dart';
+import 'hakkinda.dart';
 // --- GLOBAL AYARLAR ---
 String currentLanguage = 'tr'; 
 double fontSizeMultiplier = 16.0; 
@@ -1756,6 +1757,50 @@ class _AyarlarEkraniState extends State<AyarlarEkrani> with WidgetsBindingObserv
               // 👇 2. DEĞİŞİKLİK: SPACER'I SİLDİK, YERİNE BOŞLUK KOYDUK
               // ScrollView içinde Spacer hata verir!
               const SizedBox(height: 50), 
+              Center(
+  child: InkWell( 
+    onTap: () {
+      // Oluşturduğun dosyadaki fonksiyonu çağırıyoruz
+      hakkindaGoster(context, currentLanguage); 
+    },
+    borderRadius: BorderRadius.circular(10),
+    child: Padding(
+      padding: const EdgeInsets.all(12.0), // Tıklama alanı rahat olsun
+      child: Column(
+        children: [
+          // 1. Satır: Versiyon Bilgisi (Silik Beyaz)
+          Text(
+            currentLanguage == 'tr' 
+                ? "Kuran Günlüğü • v1.0.0" 
+                : "Quran Diary • v1.0.0",
+            style: GoogleFonts.poppins(
+              color: Colors.white24, // Çok silik, dikkat dağıtmaz
+              fontSize: 12,
+              fontWeight: FontWeight.w300, 
+              letterSpacing: 1.5, 
+            ),
+          ),
+          
+          const SizedBox(height: 4),
+
+          // 2. Satır: Kaynakça Linki (Hafif Altın)
+          Text(
+            currentLanguage == 'tr' 
+                ? "Hakkında & Kaynaklar" 
+                : "About & Credits",
+            style: GoogleFonts.poppins(
+              color: const Color(0xFFD4AF37).withOpacity(0.6), 
+              fontSize: 11,
+              fontWeight: FontWeight.w400,
+                         ),
+               ),
+        ],
+      ),
+    ),
+  ),
+),
+
+const SizedBox(height: 30),
             ],
           ),
         ),
