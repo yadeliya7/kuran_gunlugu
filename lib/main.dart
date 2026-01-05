@@ -1863,14 +1863,18 @@ class _FavorilerEkraniState extends State<FavorilerEkrani> {
               // 👇 NORMAL AYET KARTI
               var a = gosterilecekListe[index];
               String metin = currentLanguage == 'en' ? a.ingilizce : a.turkce;
-              
+              String gorunurSureIsmi = a.sureAdi;
+              if (currentLanguage == 'tr') {
+                   // Türkçe ise listemizden "Bakara" karşılığını bul
+                   gorunurSureIsmi = SureIsimleri.tr[a.sureAdi] ?? a.sureAdi;
+                }
               return Card(
                 color: const Color(0xFF1E293B),
                 margin: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15), side: BorderSide(color: Colors.white.withValues(alpha: 0.1))),
                 child: ListTile(
                   contentPadding: const EdgeInsets.all(15),
-                  title: Text("${a.sureAdi}, ${a.ayetNo}", style: const TextStyle(color: Color(0xFFD4AF37), fontWeight: FontWeight.bold)),
+                  title: Text("$gorunurSureIsmi, ${a.ayetNo}", style: const TextStyle(color: Color(0xFFD4AF37), fontWeight: FontWeight.bold)),
                   subtitle: Padding(
                     padding: const EdgeInsets.only(top: 8.0),
                     child: Text(metin, maxLines: 2, overflow: TextOverflow.ellipsis, style: const TextStyle(color: Colors.white70)),
