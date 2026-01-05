@@ -1293,83 +1293,116 @@ Widget _buildActionButtons(AyetModel ayet) {
   }
    // 👇 Sadece fotoğraf çekmek için kullanılacak özel tasarım
   Widget _paylasimKartiOlustur(AyetModel veri) {
+    String appName = currentLanguage == 'en' ? "Quran Diary" : "Kuran Günlüğü";
     String gosterilecekMeal = currentLanguage == 'en' ? veri.ingilizce : veri.turkce;
-    String gosterilecekSureIsmi = veri.sureAdi; // Varsayılan (İngilizce)
-    // Arka planın koyu ve şık olması için Material ve Container ile sarıyoruz
+    String gosterilecekSureIsmi = veri.sureAdi; 
+
     if (currentLanguage == 'tr') {
-      // Türkçe ise haritadan bak, bulamazsan eskisini koy
-      // NOT: SureIsimleri haritasının bu dosyada tanımlı olduğunu varsayıyorum
+      // NOT: SureIsimleri.tr haritasının import edildiğinden emin ol
       gosterilecekSureIsmi = SureIsimleri.tr[veri.sureAdi] ?? veri.sureAdi;
     }
     
+    // Tasarım için Altın Rengi
+    const Color altinRenk = Color(0xFFD4AF37);
+
     return Material(
-      color: Colors.transparent, // Arka plan şeffaf olsun ki Container görünsün
+      color: Colors.transparent, 
       child: Container(
-        width: 400, // Sabit genişlik (Instagram postu gibi)
-        height: 500, // Sabit yükseklik
-        padding: const EdgeInsets.all(30),
+        width: 400, 
+        height: 500,
+        // 👇 DIŞ ÇERÇEVE VE GÖLGE EFEKTİ 👇
         decoration: BoxDecoration(
-          color: const Color(0xFF0F172A), // Koyu Lacivert Arka Plan
+          color: const Color(0xFF0F172A), // Ana zemin rengi
           borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: const Color(0xFFD4AF37), width: 2), // Altın Çerçeve
-        ),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            // Logo
-            const Icon(Icons.menu_book_rounded, size: 40, color: Color(0xFFD4AF37)),
-            const SizedBox(height: 20),
-            
-            // Arapça (Esnek)
-            Flexible(
-              flex: 2,
-              child: AutoSizeText(
-                veri.arapca,
-                style: GoogleFonts.amiri(fontSize: 24, color: const Color(0xFFD4AF37),height: 2.2),
-                textAlign: TextAlign.center,
-                textDirection: TextDirection.rtl,
-                minFontSize: 14,
-                maxLines: 4,
-                
-              ),
+          // Dış kenara hafif bir parlama/gölge ekleyerek derinlik katıyoruz
+          boxShadow: [
+            BoxShadow(
+              color: altinRenk.withOpacity(0.2),
+              blurRadius: 15,
+              spreadRadius: 2,
+              offset: const Offset(0, 4),
             ),
-            
-            const SizedBox(height: 20),
-            const Divider(color: Colors.white24, thickness: 1, indent: 50, endIndent: 50),
-            const SizedBox(height: 20),
-
-            // Türkçe Meal (Sığdırılmış)
-            Expanded(
-              flex: 4,
-              child: Center(
-                child: AutoSizeText(
-                  gosterilecekMeal,
-                  style: GoogleFonts.poppins(fontSize: 20, color: Colors.white, height: 1.5, fontStyle: FontStyle.italic),
-                  textAlign: TextAlign.center,
-                  minFontSize: 12, // Sığmazsa 12'ye kadar düş
-                  maxLines: 12,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ),
-            ),
-
-            const SizedBox(height: 20),
-            // Alt bilgi
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text("Kuran Günlüğü", style: GoogleFonts.poppins(fontSize: 12, color: Colors.white54)),
-                Text(
-                  "$gosterilecekSureIsmi, ${veri.ayetNo}", 
-                  style: const TextStyle(color: Color(0xFFD4AF37), fontWeight: FontWeight.bold)
-                  )
-              ],
-            )
           ],
+          // Dışarıdaki kalın çerçeve (Biraz şeffaf)
+          border: Border.all(color: altinRenk.withOpacity(0.6), width: 3), 
+        ),
+        // 👇 İÇERİYE BİR KATMAN DAHA EKLEYEREK İSLAMİ ÇERÇEVE YAPIYORUZ 👇
+        child: Padding(
+          padding: const EdgeInsets.all(12.0), // Dış ve iç çerçeve arasındaki boşluk
+          child: Container(
+            // İçerideki ince ve keskin çerçeve
+            decoration: BoxDecoration(
+               borderRadius: BorderRadius.circular(12), // Dıştakine uyumlu kavis
+               border: Border.all(color: altinRenk, width: 1), // İnce tam altın çizgi
+            ),
+            padding: const EdgeInsets.all(20), // İçerik ile iç çerçeve arası boşluk
+            
+            // --- MEVCUT İÇERİĞİN BURADAN SONRA AYNEN DEVAM EDİYOR ---
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(Icons.menu_book_rounded, size: 40, color: altinRenk),
+                const SizedBox(height: 20),
+                
+                Flexible(
+                  flex: 2,
+                  child: AutoSizeText(
+                    veri.arapca,
+                    style: GoogleFonts.amiri(fontSize: 24, color: altinRenk, height: 2.2),
+                    textAlign: TextAlign.center,
+                    textDirection: TextDirection.rtl,
+                    minFontSize: 14,
+                    maxLines: 4,
+                  ),
+                ),
+                
+                const SizedBox(height: 20),
+                // Ayırıcıyı da altına uyumlu hale getirelim
+                Divider(color: altinRenk.withOpacity(0.4), thickness: 1, indent: 50, endIndent: 50),
+                const SizedBox(height: 20),
+
+                Expanded(
+                  flex: 4,
+                  child: Center(
+                    child: AutoSizeText(
+                      gosterilecekMeal,
+                      style: GoogleFonts.poppins(fontSize: 20, color: Colors.white, height: 1.5, fontStyle: FontStyle.italic),
+                      textAlign: TextAlign.center,
+                      minFontSize: 12,
+                      maxLines: 12,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                ),
+
+                const SizedBox(height: 20),
+                
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      appName.toUpperCase(), 
+                      style: GoogleFonts.poppins(
+                        fontSize: 12, 
+                        color: Colors.white54,
+                        letterSpacing: 2.0,
+                        fontWeight: FontWeight.w500
+                      )
+                    ),
+                    
+                    Text(
+                      "$gosterilecekSureIsmi, ${veri.ayetNo}", 
+                      style: TextStyle(color: altinRenk, fontWeight: FontWeight.bold)
+                    )
+                  ],
+                )
+              ],
+            ),
+          ),
         ),
       ),
     );
-  }
+}
 }
 class PremiumEkrani extends StatelessWidget {
   const PremiumEkrani({super.key});
