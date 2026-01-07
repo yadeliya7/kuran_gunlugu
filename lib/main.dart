@@ -526,12 +526,18 @@ class _GununAyetiEkraniState extends State<GununAyetiEkrani> {
     
     // Hangi tarihi kullanacağız? (Parametre geldiyse o, gelmediyse sınıfın değişkeni)
     DateTime islemTarihi = tarih ?? seciliTarih;
-
+    DateTime baslangicTarihi = DateTime(2026, 1, 1);
+    DateTime tarih1 = DateTime(baslangicTarihi.year, baslangicTarihi.month, baslangicTarihi.day);
+    DateTime tarih2 = DateTime(islemTarihi.year, islemTarihi.month, islemTarihi.day);
     int dayOfYear = int.parse(DateFormat("D").format(islemTarihi));
     int randomNum = Random().nextInt(10000); 
-    
+    int gecenGunSayisi = tarih2.difference(tarih1).inDays;
     // 6236 Kuran'daki toplam ayet sayısıdır.
-    int ayetId = (dayOfYear % 6236) + 1; 
+    if (gecenGunSayisi < 0) {
+      // Modüler aritmetikte negatifi pozitife çevirme
+      gecenGunSayisi = 6236 + (gecenGunSayisi % 6236);
+    }
+    int ayetId = (gecenGunSayisi % 6236) + 1; 
     
     // API İsteği: Arapça, Türkçe ve İngilizce aynı anda isteniyor
     String kalite = HafizYonetimi.getBitrate(HafizYonetimi.secilenHafizKodu);
