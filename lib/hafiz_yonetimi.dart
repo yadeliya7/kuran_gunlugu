@@ -6,9 +6,9 @@ class HafizYonetimi {
 
   // Hafız Listesi (Sadece İsim ve Kod)
   static final List<Map<String, String>> hafizlar = [
-    {'isim': 'Mişari Raşid el-Afasi', 'kod': 'ar.alafasy'},
-    {'isim': 'Mahir el-Muaykili', 'kod': 'ar.mahermuaiqly'},
-    {'isim': 'Abdüssamed (Murattal)', 'kod': 'ar.abdulbasitmurattal'},
+    {'isim': 'Mişari Raşid el-Afasi', 'kod': 'ar.alafasy-2'},
+    {'isim': 'Mahir el-Muaykili', 'kod': 'ar.mahermuaiqly-2'},
+    {'isim': 'Abdüssamed (Murattal)', 'kod': 'ar.abdulbasitmurattal-2'},
     {'isim': 'Ahmed el-Acemi', 'kod': 'ar.ahmedajamy'},
   ];
 
@@ -16,8 +16,8 @@ class HafizYonetimi {
   // Hafızın koduna bakıp doğru bitrate'i (kaliteyi) kendisi verir.
   static String getBitrate(String hafizKodu) {
     if (        
-        hafizKodu == 'ar.abdulbasitmujawwad' ||
-        hafizKodu == 'ar.abdulbasitmurattal') {
+        hafizKodu == 'ar.abdulbasitmujawwad-2' ||
+        hafizKodu == 'ar.abdulbasitmurattal-2') {
       return '192'; 
     }
     
