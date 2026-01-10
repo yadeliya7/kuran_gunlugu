@@ -2,7 +2,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 class HafizYonetimi {
   // Varsayılan Hafız
-  static String secilenHafizKodu = 'ar.alafasy';
+  static String secilenHafizKodu = 'ar.alafasy-2';
 
   // Hafız Listesi (Sadece İsim ve Kod)
   static final List<Map<String, String>> hafizlar = [
@@ -15,13 +15,12 @@ class HafizYonetimi {
   // 👇 SİHİRLİ FONKSİYON BURASI
   // Hafızın koduna bakıp doğru bitrate'i (kaliteyi) kendisi verir.
   static String getBitrate(String hafizKodu) {
-    if (        
-        hafizKodu == 'ar.abdulbasitmujawwad-2' ||
+    if (hafizKodu == 'ar.abdulbasitmujawwad-2' ||
         hafizKodu == 'ar.abdulbasitmurattal-2') {
-      return '192'; 
+      return '192';
     }
-    
-    return '128'; 
+
+    return '128';
   }
 
   // Hafızı Kaydet
