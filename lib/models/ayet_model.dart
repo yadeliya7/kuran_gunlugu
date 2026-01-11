@@ -8,6 +8,7 @@ class AyetModel {
   final String sesDosyasiUrl;
   final int? bitisAyetNo;
   final List<String>? ekSesDosyalari;
+  final DateTime? savedForDate;
 
   const AyetModel({
     required this.id,
@@ -19,6 +20,7 @@ class AyetModel {
     this.sesDosyasiUrl = "",
     this.bitisAyetNo,
     this.ekSesDosyalari,
+    this.savedForDate,
   });
 
   Map<String, dynamic> toJson() => {
@@ -31,6 +33,7 @@ class AyetModel {
     'sesDosyasiUrl': sesDosyasiUrl,
     'bitisAyetNo': bitisAyetNo,
     'ekSesDosyalari': ekSesDosyalari,
+    if (savedForDate != null) 'savedForDate': savedForDate!.toIso8601String(),
   };
 
   factory AyetModel.fromJson(Map<String, dynamic> json) {
@@ -45,6 +48,9 @@ class AyetModel {
       bitisAyetNo: json['bitisAyetNo'],
       ekSesDosyalari: json['ekSesDosyalari'] != null
           ? List<String>.from(json['ekSesDosyalari'])
+          : null,
+      savedForDate: json['savedForDate'] != null
+          ? DateTime.tryParse(json['savedForDate'])
           : null,
     );
   }
