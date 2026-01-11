@@ -129,21 +129,24 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
                     onTap: () {
                       debugPrint('Seçilen Ayet ID: ${a.id}');
 
-                      // Use reverse lookup to find the correct day index for this verse ID
-                      int correctDayIndex =
-                          DailyVerseService.getDayIndexForVerseId(a.id);
+                      // Retrieve the saved context date if available
+                      DateTime? targetDate = a.savedForDate;
 
-                      debugPrint(
-                        '🔍 Reverse Lookup: Verse ${a.id} → Day Index $correctDayIndex',
-                      );
+                      if (targetDate == null) {
+                        debugPrint(
+                          '⚠️ Legacy Favorite (No Date): Using Reverse Lookup',
+                        );
+                        int correctDayIndex =
+                            DailyVerseService.getDayIndexForVerseId(a.id);
+                        DateTime yilBasi = DateTime(2026, 1, 1);
+                        targetDate = yilBasi.add(
+                          Duration(days: correctDayIndex),
+                        );
+                      } else {
+                        debugPrint('✅ Contextual Date Found: $targetDate');
+                      }
 
-                      // Calculate the date based on the correct day index
-                      DateTime yilBasi = DateTime(2026, 1, 1);
-                      DateTime gidilecekTarih = yilBasi.add(
-                        Duration(days: correctDayIndex),
-                      );
-
-                      Navigator.pop(context, gidilecekTarih);
+                      Navigator.pop(context, targetDate);
                     },
                   ),
                 );

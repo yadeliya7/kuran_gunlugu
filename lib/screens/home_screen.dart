@@ -330,7 +330,10 @@ class _HomeScreenState extends State<HomeScreen> {
           context,
         ).showSnackBar(SnackBar(content: Text(t('removed_msg'))));
     } else {
-      list.add(jsonEncode(ayet.toJson()));
+      Map<String, dynamic> ayetMap = ayet.toJson();
+      ayetMap['savedForDate'] = seciliTarih.toIso8601String();
+      list.add(jsonEncode(ayetMap));
+
       setState(() => isFavorited = true);
       if (mounted)
         ScaffoldMessenger.of(
