@@ -7,6 +7,33 @@ import '../constants/daily_verse_map.dart';
 import 'hafiz_service.dart';
 
 class DailyVerseService {
+  /// Reverse Lookup: Finds which Day Index contains a specific Verse ID.
+  ///
+  /// This is crucial for navigation from favorites because we cannot assume
+  /// DayIndex == VerseID due to Smart Merge logic.
+  ///
+  /// Example: If dailyStartIds is [1, 3, 5] and targetVerseId is 4:
+  /// - Index 0 (Start ID 1) <= 4? Yes.
+  /// - Index 1 (Start ID 3) <= 4? Yes.
+  /// - Index 2 (Start ID 5) <= 4? No.
+  /// Result: Verse 4 belongs to Day Index 1.
+  static int getDayIndexForVerseId(int targetVerseId) {
+    final List<int> startIds = DailyVerseMap.dailyStartIds;
+
+    // Find the last index where startIds[index] <= targetVerseId
+    int dayIndex = 0;
+    for (int i = 0; i < startIds.length; i++) {
+      if (startIds[i] <= targetVerseId) {
+        dayIndex = i;
+      } else {
+        // Once we find a start ID greater than target, we've gone too far
+        break;
+      }
+    }
+
+    return dayIndex;
+  }
+
   /// Gets the verse for a specific date using strict Calendar-based logic.
   /// Anchor Date: January 1, 2026.
   Future<AyetModel> getVerseForDate(DateTime date) async {
