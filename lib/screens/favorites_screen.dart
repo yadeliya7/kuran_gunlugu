@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../core/constants/colors.dart';
 import '../core/constants/strings.dart';
+import '../core/services/daily_verse_service.dart';
 import '../models/ayet_model.dart';
 import '../models/sure_isimleri.dart';
 import '../core/services/global_settings.dart';
@@ -126,9 +127,20 @@ class _FavoritesScreenState extends State<FavoritesScreen> {
                       onPressed: () => _sil(index, a),
                     ),
                     onTap: () {
-                      DateTime yilBasi = DateTime(DateTime.now().year, 1, 1);
+                      debugPrint('Seçilen Ayet ID: ${a.id}');
+
+                      // Use reverse lookup to find the correct day index for this verse ID
+                      int correctDayIndex =
+                          DailyVerseService.getDayIndexForVerseId(a.id);
+
+                      debugPrint(
+                        '🔍 Reverse Lookup: Verse ${a.id} → Day Index $correctDayIndex',
+                      );
+
+                      // Calculate the date based on the correct day index
+                      DateTime yilBasi = DateTime(2026, 1, 1);
                       DateTime gidilecekTarih = yilBasi.add(
-                        Duration(days: a.id - 1),
+                        Duration(days: correctDayIndex),
                       );
 
                       Navigator.pop(context, gidilecekTarih);

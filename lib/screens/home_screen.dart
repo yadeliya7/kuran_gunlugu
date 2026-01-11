@@ -46,6 +46,11 @@ class _HomeScreenState extends State<HomeScreen> {
   String? kaydedilenNot;
   final TextEditingController _notController = TextEditingController();
 
+  // Audio playlist management
+  List<String> _audioPlaylist = [];
+  int _currentAudioIndex = 0;
+  StreamSubscription<void>? _playerCompleteSubscription;
+
   @override
   void initState() {
     super.initState();
@@ -62,29 +67,71 @@ class _HomeScreenState extends State<HomeScreen> {
         });
       }
     });
-    _audioPlayer.onPlayerComplete.listen((event) {
-      if (mounted) {
-        if (_audioPlaylist.isNotEmpty &&
-            _currentAudioIndex < _audioPlaylist.length - 1) {
-          // Move to next track
-          _currentAudioIndex++;
-          _playCurrentTrack();
-        } else {
-          // Playlist finished
-          setState(() {
-            isPlaying = false;
-            _currentAudioIndex = 0;
-          });
-        }
+
+    // Set up audio player completion listener for sequential playback
+    _playerCompleteSubscription = _audioPlayer.onPlayerComplete.listen((event) {
+      debugPrint(
+        "🎵 Track completed. Current index: $_currentAudioIndex, Playlist length: ${_audioPlaylist.length}",
+      );
+
+      if (!mounted) return;
+
+      // Check if there are more tracks to play
+      if (_audioPlaylist.isNotEmpty &&
+          _currentAudioIndex < _audioPlaylist.length - 1) {
+        // Move to next track
+        _currentAudioIndex++;
+        debugPrint(
+          "⏭️ Moving to next track: $_currentAudioIndex/${_audioPlaylist.length}",
+        );
+        _playCurrentTrack();
+      } else {
+        // Playlist finished - reset to initial state
+        debugPrint("✅ Playlist completed. Resetting player state.");
+        setState(() {
+          isPlaying = false;
+          _currentAudioIndex = 0;
+        });
       }
     });
   }
 
+  @override
+  void dispose() {
+    _playerCompleteSubscription?.cancel();
+    _audioPlayer.dispose();
+    _notController.dispose();
+    super.dispose();
+  }
+
   void ayarlariAc() async {
+    // Store current reciter before opening settings
+    String previousReciter = HafizYonetimi.secilenHafizKodu;
+    debugPrint("🎙️ Current Reciter before settings: $previousReciter");
+
     await Navigator.push(
       context,
       MaterialPageRoute(builder: (context) => const SettingsScreen()),
     );
+
+    // Check if reciter has changed after returning from settings
+    String currentReciter = HafizYonetimi.secilenHafizKodu;
+
+    if (previousReciter != currentReciter) {
+      debugPrint("🔄 Reciter changed: $previousReciter → $currentReciter");
+
+      // Stop current playback and clear playlist
+      await _audioPlayer.stop();
+
+      setState(() {
+        isPlaying = false;
+        _audioPlaylist.clear();
+        _currentAudioIndex = 0;
+      });
+
+      debugPrint("✅ Audio source cleared. Next playback will use new reciter.");
+    }
+
     setState(() {});
   }
 
@@ -102,6 +149,11 @@ class _HomeScreenState extends State<HomeScreen> {
       isPlaying = false;
       isFavorited = false;
       _audioPlayer.stop();
+
+      // Clear audio playlist
+      _audioPlaylist.clear();
+      _currentAudioIndex = 0;
+
       futureAyet = ayetiGetir(seciliTarih);
     });
   }
@@ -125,6 +177,10 @@ class _HomeScreenState extends State<HomeScreen> {
       seciliTarih = yeniTarih;
       isPlaying = false;
       isFavorited = false;
+
+      // Clear audio playlist when changing dates
+      _audioPlaylist.clear();
+      _currentAudioIndex = 0;
 
       futureAyet = ayetiGetir(seciliTarih).whenComplete(() {
         setState(() {
@@ -367,72 +423,120 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
-  List<String> _audioPlaylist = [];
-  int _currentAudioIndex = 0;
-
   void sesiCalVeyaDurdur(AyetModel ayet) async {
     try {
       if (isPlaying) {
+        // Pause current playback
         await _audioPlayer.pause();
         setState(() => isPlaying = false);
-      } else {
-        await _audioPlayer.stop();
-        _audioPlaylist.clear();
-        _currentAudioIndex = 0;
-
-        _currentAudioIndex = 0;
-
-        // Dynamic Audio Construction (Hot Reload Support)
-        String kalite = HafizYonetimi.getBitrate(
-          HafizYonetimi.secilenHafizKodu,
+        debugPrint(
+          "⏸️ Audio paused at track ${_currentAudioIndex + 1}/${_audioPlaylist.length}",
         );
-        String hafiz = HafizYonetimi.secilenHafizKodu;
+      } else {
+        // Check if we're resuming or starting fresh
+        final playerState = _audioPlayer.state;
 
-        // Robust Strategy: Parse Global ID from the existing URL
-        int globalStartId = ayet.id;
-        try {
-          final uriSegments = Uri.parse(ayet.sesDosyasiUrl).pathSegments;
-          if (uriSegments.isNotEmpty) {
-            String last = uriSegments.last;
-            String idStr = last.replaceAll('.mp3', '');
-            globalStartId = int.tryParse(idStr) ?? ayet.id;
-          }
-        } catch (_) {}
-
-        int count = 1;
-        if (ayet.bitisAyetNo != null) {
-          count = (ayet.bitisAyetNo! - ayet.ayetNo) + 1;
-        }
-
-        for (int i = 0; i < count; i++) {
-          int currentId = globalStartId + i;
-          String url =
-              "https://cdn.islamic.network/quran/audio/$kalite/$hafiz/$currentId.mp3";
-          _audioPlaylist.add(url);
-        }
-
-        if (_audioPlaylist.isNotEmpty) {
+        if (playerState == PlayerState.paused && _audioPlaylist.isNotEmpty) {
+          // Resume from pause
+          await _audioPlayer.resume();
+          setState(() => isPlaying = true);
           debugPrint(
-            "🎵 Playlist (Reciter: $hafiz): ${_audioPlaylist.length} tracks",
+            "▶️ Resuming track ${_currentAudioIndex + 1}/${_audioPlaylist.length}",
           );
-          await _playCurrentTrack();
+        } else {
+          // Start fresh playback
+          await _audioPlayer.stop();
+          _audioPlaylist.clear();
+          _currentAudioIndex = 0;
+
+          // Dynamic Audio Construction (Hot Reload Support)
+          String kalite = HafizYonetimi.getBitrate(
+            HafizYonetimi.secilenHafizKodu,
+          );
+          String hafiz = HafizYonetimi.secilenHafizKodu;
+
+          // Robust Strategy: Parse Global ID from the existing URL
+          int globalStartId = ayet.id;
+          try {
+            final uriSegments = Uri.parse(ayet.sesDosyasiUrl).pathSegments;
+            if (uriSegments.isNotEmpty) {
+              String last = uriSegments.last;
+              String idStr = last.replaceAll('.mp3', '');
+              globalStartId = int.tryParse(idStr) ?? ayet.id;
+            }
+          } catch (_) {}
+
+          // Build playlist for merged verses
+          int count = 1;
+          if (ayet.bitisAyetNo != null) {
+            count = (ayet.bitisAyetNo! - ayet.ayetNo) + 1;
+            debugPrint(
+              "📋 Merged verse detected: ${ayet.ayetNo}-${ayet.bitisAyetNo} ($count tracks)",
+            );
+          }
+
+          for (int i = 0; i < count; i++) {
+            int currentId = globalStartId + i;
+            String url =
+                "https://cdn.islamic.network/quran/audio/$kalite/$hafiz/$currentId.mp3";
+            _audioPlaylist.add(url);
+          }
+
+          if (_audioPlaylist.isNotEmpty) {
+            debugPrint(
+              "🎵 Playlist built (Reciter: $hafiz): ${_audioPlaylist.length} track(s)",
+            );
+            for (int i = 0; i < _audioPlaylist.length; i++) {
+              debugPrint("   Track ${i + 1}: ${_audioPlaylist[i]}");
+            }
+            await _playCurrentTrack();
+          }
         }
       }
     } catch (e) {
-      debugPrint('Ses Hatası: $e');
+      debugPrint('❌ Audio Error: $e');
+      setState(() {
+        isPlaying = false;
+        _audioPlaylist.clear();
+        _currentAudioIndex = 0;
+      });
     }
   }
 
   Future<void> _playCurrentTrack() async {
-    if (_currentAudioIndex >= _audioPlaylist.length) return;
+    if (_currentAudioIndex >= _audioPlaylist.length) {
+      debugPrint("⚠️ Attempted to play beyond playlist bounds");
+      setState(() {
+        isPlaying = false;
+        _currentAudioIndex = 0;
+      });
+      return;
+    }
+
+    if (!mounted) return;
 
     try {
       String url = _audioPlaylist[_currentAudioIndex];
-      debugPrint("▶️ Playing Track ${_currentAudioIndex + 1}: $url");
+      debugPrint(
+        "▶️ Playing Track ${_currentAudioIndex + 1}/${_audioPlaylist.length}: $url",
+      );
+
+      await _audioPlayer.stop(); // Stop any previous playback
       await _audioPlayer.play(UrlSource(url));
-      setState(() => isPlaying = true);
+
+      if (mounted) {
+        setState(() => isPlaying = true);
+      }
     } catch (e) {
-      debugPrint("Audio Play Error: $e");
+      debugPrint("❌ Audio Play Error on track ${_currentAudioIndex + 1}: $e");
+
+      if (mounted) {
+        setState(() {
+          isPlaying = false;
+          _audioPlaylist.clear();
+          _currentAudioIndex = 0;
+        });
+      }
     }
   }
 
