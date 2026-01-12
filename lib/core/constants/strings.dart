@@ -55,6 +55,26 @@ final Map<String, Map<String, String>> dictionary = {
     'reciter_title': 'Seslendiren Hafız',
     'selected_reciter': 'Seçili Hafız',
     'select_reciter_title': 'Hafız Seçimi',
+    'support_us': 'Projeye Destek Ol',
+    'support_desc': 'Uygulamanın gelişmesi için katkıda bulunabilirsiniz.',
+    'donate': 'Bağış Yap',
+    'donation_success': 'Teşekkürler!',
+    'donation_success_msg': 'Desteğiniz için Allah razı olsun.',
+    'donation_error': 'Bir hata oluştu veya iptal edildi.',
+    'loading_products': 'Bağış seçenekleri yükleniyor...',
+    'no_products': 'Şu anda bağış seçeneği bulunmuyor.',
+    'support_title': 'Bu Hayra Ortak Olun',
+    'support_long_desc':
+        'Kuran Günlüğü uygulamasını tamamen ücretsiz ve reklamsız olarak geliştirmeye devam ediyoruz. Bu projenin sürekliliğini sağlamak ve geliştirilmesine katkıda bulunmak isterseniz bize destek olabilirsiniz.',
+    'support_footer':
+        'Desteğiniz, sunucu masrafları ve uygulamanın geliştirilmesi için kullanılacaktır.',
+    'donation_tier_1': 'Uygulamaya Destek',
+    'donation_tier_2': 'Projeye Katkı',
+    'donation_tier_3': 'Geliştirmeye Destek',
+    'donation_tier_default': 'Destek Ol',
+    'success_title': 'Teşekkürler',
+    'success_body':
+        'Desteğiniz bizim için çok değerli. Katkılarınızla uygulamayı geliştirmeye devam edeceğiz.',
   },
   'en': {
     'app_name': 'Quran Diary',
@@ -110,6 +130,26 @@ final Map<String, Map<String, String>> dictionary = {
     'reciter_title': 'Reciter',
     'selected_reciter': 'Selected Reciter',
     'select_reciter_title': 'Select Reciter',
+    'support_us': 'Support the Project',
+    'support_desc': 'You can contribute to the development of the app.',
+    'donate': 'Donate',
+    'donation_success': 'Thank You!',
+    'donation_success_msg': 'May Allah bless you for your support.',
+    'donation_error': 'An error occurred or cancelled.',
+    'loading_products': 'Loading donation options...',
+    'no_products': 'No donation options available right now.',
+    'support_title': 'Support the Cause',
+    'support_long_desc':
+        'We continue to develop the Quran Diary app completely free and ad-free. If you would like to ensure the continuity of this project and contribute to its development, you can support us.',
+    'support_footer':
+        'Your support will be used for server costs and further development of the app.',
+    'donation_tier_1': 'Support the App',
+    'donation_tier_2': 'Contribute to Project',
+    'donation_tier_3': 'Support Development',
+    'donation_tier_default': 'Donate',
+    'success_title': 'Thank You',
+    'success_body':
+        'Your support is very valuable to us. We will continue to develop the app with your contributions.',
   },
 };
 
