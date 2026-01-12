@@ -6,6 +6,7 @@ import '../core/constants/colors.dart';
 import '../core/constants/strings.dart';
 import '../core/services/global_settings.dart';
 import '../core/services/notification_service.dart';
+import '../core/services/donation_service.dart';
 import 'home_screen.dart';
 
 class SplashScreen extends StatefulWidget {
@@ -33,6 +34,13 @@ class _SplashScreenState extends State<SplashScreen> {
       await initializeDateFormatting('tr_TR', null);
     } catch (e) {
       debugPrint("⚠️ Tarih formatı hatası: $e");
+    }
+
+    try {
+      // Initialize RevenueCat Donation Service
+      await DonationService().init();
+    } catch (e) {
+      debugPrint("⚠️ Bağış servisi hatası: $e");
     }
 
     try {

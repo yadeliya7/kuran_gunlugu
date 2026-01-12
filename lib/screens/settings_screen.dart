@@ -2,10 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:purchases_flutter/purchases_flutter.dart';
 import '../core/constants/colors.dart';
 import '../core/constants/strings.dart';
 import '../core/services/global_settings.dart';
 import '../core/services/hafiz_service.dart';
+import '../core/services/donation_service.dart';
 import 'about_screen.dart';
 
 class SettingsScreen extends StatefulWidget {
@@ -279,6 +281,48 @@ class _SettingsScreenState extends State<SettingsScreen>
                 ),
               ),
               const SizedBox(height: 30),
+
+              // SUPPORT US BUTTON
+              GestureDetector(
+                onTap: _showDonationSheet,
+                child: Container(
+                  padding: const EdgeInsets.all(15),
+                  decoration: BoxDecoration(
+                    color: Colors.redAccent.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(15),
+                    border: Border.all(
+                      color: Colors.redAccent.withValues(alpha: 0.3),
+                    ),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.favorite, color: Colors.redAccent),
+                      const SizedBox(width: 15),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              t('support_us'),
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 16,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const Icon(
+                        Icons.arrow_forward_ios,
+                        color: Colors.white54,
+                        size: 16,
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(height: 30),
               Text(
                 t('language'),
                 style: const TextStyle(color: Colors.white54, fontSize: 14),
@@ -386,6 +430,238 @@ class _SettingsScreenState extends State<SettingsScreen>
           ),
         ),
       ),
+    );
+  }
+
+  void _showDonationSheet() {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true, // Allow full height flexibility
+      backgroundColor: AppColors.cardBackground,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (sheetContext) {
+        return Container(
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
+          width: double.infinity,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // 1. Header: Heart Icon
+              const Icon(Icons.favorite, color: Colors.redAccent, size: 48),
+              const SizedBox(height: 15),
+
+              // 2. Title
+              Text(
+                t('support_title'),
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 22,
+                  fontWeight: FontWeight.bold,
+                ),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 10),
+
+              // 3. Description
+              Text(
+                t('support_long_desc'),
+                textAlign: TextAlign.center,
+                style: const TextStyle(color: Colors.white70, fontSize: 14),
+              ),
+              const SizedBox(height: 25),
+
+              // 4. Donation List
+              Flexible(
+                child: FutureBuilder<List<Package>>(
+                  future: DonationService().fetchDonations(),
+                  builder: (context, snapshot) {
+                    if (snapshot.connectionState == ConnectionState.waiting) {
+                      return Padding(
+                        padding: const EdgeInsets.all(20.0),
+                        child: Column(
+                          children: [
+                            const CircularProgressIndicator(
+                              color: AppColors.gold,
+                            ),
+                            const SizedBox(height: 10),
+                            Text(
+                              t('loading_products'),
+                              style: const TextStyle(color: Colors.white54),
+                            ),
+                          ],
+                        ),
+                      );
+                    }
+
+                    if (!snapshot.hasData || snapshot.data!.isEmpty) {
+                      return Padding(
+                        padding: const EdgeInsets.all(20.0),
+                        child: Text(
+                          t('no_products'),
+                          style: const TextStyle(color: Colors.white54),
+                        ),
+                      );
+                    }
+
+                    // Sort packages by price (Low to High)
+                    var packages = List<Package>.from(snapshot.data!);
+                    packages.sort(
+                      (a, b) =>
+                          a.storeProduct.price.compareTo(b.storeProduct.price),
+                    );
+
+                    return Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: packages.asMap().entries.map((entry) {
+                        int index = entry.key;
+                        Package package = entry.value;
+
+                        // Custom Tier Names based on index
+                        String tierName;
+                        if (index == 0) {
+                          tierName = t(
+                            'donation_tier_1',
+                          ); // "Uygulamaya Destek"
+                        } else if (index == 1) {
+                          tierName = t('donation_tier_2'); // "Projeye Katkı"
+                        } else if (index == 2) {
+                          tierName = t(
+                            'donation_tier_3',
+                          ); // "Geliştirmeye Destek"
+                        } else {
+                          tierName = t('donation_tier_default'); // "Destek Ol"
+                        }
+
+                        return Card(
+                          color: Colors.transparent,
+                          elevation: 0,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            side: BorderSide(
+                              color: Colors.white.withValues(alpha: 0.1),
+                            ),
+                          ),
+                          margin: const EdgeInsets.only(bottom: 12),
+                          child: InkWell(
+                            onTap: () async {
+                              Navigator.pop(
+                                sheetContext,
+                              ); // Close sheet before purchase
+                              bool success = await DonationService()
+                                  .makePurchase(package);
+                              if (mounted) {
+                                if (success) {
+                                  showDialog(
+                                    context:
+                                        context, // Uses SettingsScreen context
+                                    builder: (context) => AlertDialog(
+                                      backgroundColor: AppColors.cardBackground,
+                                      title: Text(
+                                        t('success_title'),
+                                        style: const TextStyle(
+                                          color: AppColors.gold,
+                                        ),
+                                      ),
+                                      content: Text(
+                                        t('success_body'),
+                                        style: const TextStyle(
+                                          color: Colors.white,
+                                        ),
+                                      ),
+                                      actions: [
+                                        TextButton(
+                                          child: const Text("Tamam"),
+                                          onPressed: () =>
+                                              Navigator.pop(context),
+                                        ),
+                                      ],
+                                    ),
+                                  );
+                                } else {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(
+                                      content: Text(t('donation_error')),
+                                      backgroundColor: Colors.redAccent,
+                                    ),
+                                  );
+                                }
+                              }
+                            },
+                            borderRadius: BorderRadius.circular(12),
+                            child: Padding(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 16,
+                                vertical: 12,
+                              ),
+                              child: Row(
+                                children: [
+                                  // Simple Bullet or Icon
+                                  Icon(
+                                    Icons.volunteer_activism,
+                                    color: Colors.white.withValues(alpha: 0.8),
+                                    size: 20,
+                                  ),
+                                  const SizedBox(width: 15),
+                                  Expanded(
+                                    child: Text(
+                                      tierName,
+                                      style: const TextStyle(
+                                        color: Colors.white,
+                                        fontWeight: FontWeight.w600,
+                                        fontSize: 16,
+                                      ),
+                                    ),
+                                  ),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 12,
+                                      vertical: 6,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: AppColors.gold.withValues(
+                                        alpha: 0.2,
+                                      ),
+                                      borderRadius: BorderRadius.circular(8),
+                                      border: Border.all(
+                                        color: AppColors.gold.withValues(
+                                          alpha: 0.5,
+                                        ),
+                                      ),
+                                    ),
+                                    child: Text(
+                                      package.storeProduct.priceString,
+                                      style: const TextStyle(
+                                        color: AppColors.gold,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        );
+                      }).toList(),
+                    );
+                  },
+                ),
+              ),
+
+              const SizedBox(height: 15),
+              // 5. Footer Note
+              Text(
+                t('support_footer'),
+                textAlign: TextAlign.center,
+                style: const TextStyle(color: Colors.white38, fontSize: 11),
+              ),
+              // Add safe area padding at bottom
+              SizedBox(height: MediaQuery.of(sheetContext).padding.bottom + 10),
+            ],
+          ),
+        );
+      },
     );
   }
 }
