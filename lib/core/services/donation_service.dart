@@ -45,15 +45,29 @@ class DonationService {
 
   Future<bool> makePurchase(Package package) async {
     try {
+      // Satın alma işlemini başlat
       await Purchases.purchasePackage(package);
-      // For consumables (donations), we just care that the transaction succeeded.
-      // We don't need to check entitlements.
+
+      // Consumable (bağış) için sadece transaction'ın başarılı olmasına bakarız
+      // Entitlement kontrolü yapmamıza gerek yok
+      debugPrint('Purchase successful for package: ${package.identifier}');
       return true;
     } on PlatformException catch (e) {
+      // Hata kodunu kontrol et
       var errorCode = PurchasesErrorHelper.getErrorCode(e);
-      if (errorCode != PurchasesErrorCode.purchaseCancelledError) {
-        debugPrint("Purchase error: $e");
+
+      // Kullanıcı iptal ettiyse sessizce false döndür
+      if (errorCode == PurchasesErrorCode.purchaseCancelledError) {
+        debugPrint('Purchase cancelled by user');
+        return false;
       }
+
+      // Diğer hatalar için log tut
+      debugPrint('Purchase error: Code=$errorCode, Message=${e.message}');
+      return false;
+    } catch (e) {
+      // Beklenmeyen hatalar
+      debugPrint('Unexpected purchase error: $e');
       return false;
     }
   }

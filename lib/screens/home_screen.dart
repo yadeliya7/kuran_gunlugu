@@ -524,21 +524,40 @@ class _HomeScreenState extends State<HomeScreen> {
         "▶️ Playing Track ${_currentAudioIndex + 1}/${_audioPlaylist.length}: $url",
       );
 
-      await _audioPlayer.stop(); // Stop any previous playback
-      await _audioPlayer.play(UrlSource(url));
+      // Stop any previous playback
+      await _audioPlayer.stop();
+
+      // Release previous source
+      await _audioPlayer.release();
+
+      // Set new source and play
+      await _audioPlayer.setSourceUrl(url);
+      await _audioPlayer.resume();
 
       if (mounted) {
         setState(() => isPlaying = true);
       }
     } catch (e) {
       debugPrint("❌ Audio Play Error on track ${_currentAudioIndex + 1}: $e");
+      debugPrint("📍 URL: ${_audioPlaylist[_currentAudioIndex]}");
 
       if (mounted) {
         setState(() {
           isPlaying = false;
-          _audioPlaylist.clear();
-          _currentAudioIndex = 0;
         });
+
+        // Kullanıcıya bilgi ver
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              GlobalSettings.currentLanguage == 'tr'
+                  ? 'Ses dosyası yüklenemedi. İnternet bağlantınızı kontrol edin.'
+                  : 'Failed to load audio. Check your internet connection.',
+            ),
+            backgroundColor: Colors.redAccent,
+            duration: const Duration(seconds: 3),
+          ),
+        );
       }
     }
   }
