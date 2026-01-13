@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:permission_handler/permission_handler.dart';
@@ -471,268 +472,412 @@ class _SettingsScreenState extends State<SettingsScreen>
       context: context,
       isScrollControlled: true,
       backgroundColor: AppColors.background,
+      isDismissible: true, // Kullanıcı dışarı tıklayarak kapatabilir
+      enableDrag: true, // Sürükleyerek kapatabilir
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
       builder: (sheetContext) {
-        return Container(
-          width: double.infinity,
-          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              // 0. Top Handle
-              Container(
-                width: 40,
-                height: 4,
-                decoration: BoxDecoration(
-                  color: AppColors.gold, // Gold handle
-                  borderRadius: BorderRadius.circular(2),
-                ),
-              ),
-              const SizedBox(height: 20),
+        return StatefulBuilder(
+          builder: (BuildContext context, StateSetter setSheetState) {
+            bool isLoading = false;
 
-              // 1. Header: Icon
-              const Icon(
-                Icons.volunteer_activism,
-                color: AppColors.gold,
-                size: 48,
-              ), // Gold icon
-              const SizedBox(height: 15),
+            return Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // 0. Top Handle
+                  Container(
+                    width: 40,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: AppColors.gold, // Gold handle
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
+                  const SizedBox(height: 20),
 
-              // 2. Title
-              Text(
-                t('support_title'), // "Bu Hayra Ortak Olun"
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 24,
-                  fontWeight: FontWeight.bold,
-                ),
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 10),
+                  // 1. Header: Icon
+                  const Icon(
+                    Icons.volunteer_activism,
+                    color: AppColors.gold,
+                    size: 48,
+                  ), // Gold icon
+                  const SizedBox(height: 15),
 
-              // 3. Description
-              Text(
-                t('support_long_desc'),
-                textAlign: TextAlign.center,
-                style: const TextStyle(
-                  color: Colors.white70, // 70-80% opacity white
-                  fontSize: 14,
-                  height: 1.5,
-                ),
-              ),
-              const SizedBox(height: 30),
+                  // 2. Title
+                  Text(
+                    GlobalSettings.currentLanguage == 'tr'
+                        ? "Bu Hayra Ortak Olun"
+                        : "Support Our Mission",
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 24,
+                      fontWeight: FontWeight.bold,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 20),
 
-              // 4. Donation List
-              Flexible(
-                child: FutureBuilder<List<Package>>(
-                  future: DonationService().fetchDonations(),
-                  builder: (context, snapshot) {
-                    if (snapshot.connectionState == ConnectionState.waiting) {
-                      return const Padding(
-                        padding: EdgeInsets.all(20.0),
-                        child: CircularProgressIndicator(color: AppColors.gold),
-                      );
-                    }
+                  // 3. Benefits List (Compact Vertical)
+                  _buildCompactBenefit(
+                    icon: Icons.volunteer_activism,
+                    titleTr: "İyiliği Paylaşın",
+                    titleEn: "Share the Goodness",
+                    subtitleTr:
+                        "Uygulamanın herkes için ücretsiz kalmasına vesile olun.",
+                    subtitleEn: "Help keep the app free for everyone.",
+                  ),
+                  const SizedBox(height: 12),
+                  _buildCompactBenefit(
+                    icon: Icons.block,
+                    titleTr: "Reklamsız Deneyim",
+                    titleEn: "Ad-Free Experience",
+                    subtitleTr:
+                        "Dikkatiniz dağılmadan sadece maneviyata odaklanın.",
+                    subtitleEn:
+                        "Focus purely on spirituality without distractions.",
+                  ),
+                  const SizedBox(height: 12),
+                  _buildCompactBenefit(
+                    icon: Icons.auto_awesome,
+                    titleTr: "Geliştirmeye Destek",
+                    titleEn: "Support Development",
+                    subtitleTr: "Yeni özellikler eklememize güç verin.",
+                    subtitleEn: "Empower us to build new features.",
+                  ),
+                  const SizedBox(height: 25),
 
-                    if (!snapshot.hasData || snapshot.data!.isEmpty) {
-                      return Padding(
-                        padding: const EdgeInsets.all(20.0),
-                        child: Text(
-                          t('no_products'),
-                          style: const TextStyle(color: Colors.white54),
-                        ),
-                      );
-                    }
-
-                    // Sort: Low to High
-                    var packages = List<Package>.from(snapshot.data!);
-                    packages.sort(
-                      (a, b) =>
-                          a.storeProduct.price.compareTo(b.storeProduct.price),
-                    );
-
-                    return Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: packages.asMap().entries.map((entry) {
-                        int index = entry.key;
-                        Package package = entry.value;
-
-                        // Tier Names
-                        String tierName;
-                        IconData tierIcon;
-                        if (index == 0) {
-                          tierName = t('donation_tier_1');
-                          tierIcon = Icons.coffee_rounded; // ☕ equivalent
-                        } else if (index == 1) {
-                          tierName = t('donation_tier_2');
-                          tierIcon = Icons.local_florist; // 🌹 equivalent
-                        } else if (index == 2) {
-                          tierName = t('donation_tier_3');
-                          tierIcon = Icons.diamond; // 💎 equivalent
-                        } else {
-                          tierName = t('donation_tier_default');
-                          tierIcon = Icons.favorite;
+                  // 4. Donation List
+                  Flexible(
+                    child: FutureBuilder<List<Package>>(
+                      future: DonationService().fetchDonations(),
+                      builder: (context, snapshot) {
+                        if (snapshot.connectionState ==
+                            ConnectionState.waiting) {
+                          return const Padding(
+                            padding: EdgeInsets.all(20.0),
+                            child: CircularProgressIndicator(
+                              color: AppColors.gold,
+                            ),
+                          );
                         }
 
-                        // Middle card (index 1) gets special gold border
-                        bool isHighlight = (index == 1);
-
-                        return Container(
-                          margin: const EdgeInsets.only(bottom: 16),
-                          decoration: BoxDecoration(
-                            // Lighter dark blue for card bg
-                            color: AppColors.cardBackground,
-                            borderRadius: BorderRadius.circular(16),
-                            border: Border.all(
-                              color: isHighlight
-                                  ? AppColors.gold
-                                  : Colors.white12,
-                              width: isHighlight ? 2.0 : 0.5,
+                        if (!snapshot.hasData || snapshot.data!.isEmpty) {
+                          return Padding(
+                            padding: const EdgeInsets.all(20.0),
+                            child: Text(
+                              t('no_products'),
+                              style: const TextStyle(color: Colors.white54),
                             ),
-                          ),
-                          child: Material(
-                            color: Colors.transparent,
-                            child: InkWell(
-                              onTap: () async {
-                                Navigator.pop(sheetContext);
-                                bool success = await DonationService()
-                                    .makePurchase(package);
-                                if (mounted) {
-                                  if (success) {
-                                    showDialog(
-                                      context: context,
-                                      builder: (context) => AlertDialog(
-                                        backgroundColor:
-                                            AppColors.cardBackground,
-                                        title: Text(
-                                          t('success_title'),
-                                          style: const TextStyle(
-                                            color: AppColors.gold,
-                                          ),
-                                        ),
-                                        content: Text(
-                                          t('success_body'),
-                                          style: const TextStyle(
-                                            color: Colors.white,
-                                          ),
-                                        ),
-                                        actions: [
-                                          TextButton(
-                                            child: const Text(
-                                              "Tamam",
-                                              style: TextStyle(
-                                                color: AppColors.gold,
-                                              ),
-                                            ),
-                                            onPressed: () =>
-                                                Navigator.pop(context),
-                                          ),
-                                        ],
-                                      ),
-                                    );
-                                  } else {
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      SnackBar(
-                                        content: Text(t('donation_error')),
-                                        backgroundColor: Colors.redAccent,
-                                      ),
-                                    );
-                                  }
-                                }
-                              },
-                              borderRadius: BorderRadius.circular(16),
-                              child: Padding(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 20,
-                                  vertical: 16,
-                                ),
-                                child: Row(
-                                  children: [
-                                    // Leading Icon
-                                    Icon(
-                                      tierIcon,
-                                      color: AppColors.gold,
-                                      size: 24,
-                                    ),
-                                    const SizedBox(width: 15),
+                          );
+                        }
 
-                                    // Title & Subtitle
-                                    Expanded(
-                                      child: Column(
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.start,
-                                        children: [
-                                          Text(
-                                            tierName,
-                                            style: const TextStyle(
-                                              color: Colors.white,
-                                              fontWeight: FontWeight.bold,
-                                              fontSize: 16,
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-
-                                    // Price Tag
-                                    Container(
-                                      padding: const EdgeInsets.symmetric(
-                                        horizontal: 14,
-                                        vertical: 8,
-                                      ),
-                                      decoration: BoxDecoration(
-                                        color: AppColors.gold, // Gold BG
-                                        borderRadius: BorderRadius.circular(20),
-                                      ),
-                                      child: Text(
-                                        package.storeProduct.priceString,
-                                        style: const TextStyle(
-                                          color: Color(
-                                            0xFF0F172A,
-                                          ), // Dark Text (Navy/Black)
-                                          fontWeight: FontWeight.bold,
-                                          fontSize: 14,
-                                        ),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ),
+                        // Sort: Low to High
+                        var packages = List<Package>.from(snapshot.data!);
+                        packages.sort(
+                          (a, b) => a.storeProduct.price.compareTo(
+                            b.storeProduct.price,
                           ),
                         );
-                      }).toList(),
-                    );
-                  },
-                ),
-              ),
 
-              const SizedBox(height: 20),
-              // 5. Footer
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  const Icon(
-                    Icons.verified_user,
-                    color: AppColors.gold,
-                    size: 16,
+                        return ListView.builder(
+                          shrinkWrap: true,
+                          physics: const NeverScrollableScrollPhysics(),
+                          itemCount: packages.length,
+                          itemBuilder: (context, index) {
+                            Package package = packages[index];
+
+                            // Tier Names
+                            String tierName;
+                            IconData tierIcon;
+                            if (index == 0) {
+                              tierName = t('donation_tier_1');
+                              tierIcon = Icons.coffee_rounded; // ☕ equivalent
+                            } else if (index == 1) {
+                              tierName = t('donation_tier_2');
+                              tierIcon = Icons.local_florist; // 🌹 equivalent
+                            } else if (index == 2) {
+                              tierName = t('donation_tier_3');
+                              tierIcon = Icons.diamond; // 💎 equivalent
+                            } else {
+                              tierName = t('donation_tier_default');
+                              tierIcon = Icons.favorite;
+                            }
+
+                            // Middle card (index 1) gets special gold border
+                            bool isHighlight = (index == 1);
+
+                            return Container(
+                              margin: const EdgeInsets.only(bottom: 16),
+                              decoration: BoxDecoration(
+                                // Lighter dark blue for card bg
+                                color: AppColors.cardBackground,
+                                borderRadius: BorderRadius.circular(16),
+                                border: Border.all(
+                                  color: isHighlight
+                                      ? AppColors.gold
+                                      : Colors.white12,
+                                  width: isHighlight ? 2.0 : 0.5,
+                                ),
+                              ),
+                              child: Material(
+                                color: Colors.transparent,
+                                child: InkWell(
+                                  onTap: isLoading
+                                      ? null
+                                      : () async {
+                                          // 1. LOADING STATE BAŞLAT
+                                          setSheetState(() {
+                                            isLoading = true;
+                                          });
+
+                                          try {
+                                            // 2. SATIN ALMA İŞLEMİ
+                                            bool success =
+                                                await DonationService()
+                                                    .makePurchase(package);
+
+                                            // 3. MOUNTED CHECK (await sonrası)
+                                            if (!mounted) return;
+
+                                            // 4. Loading state'i kapat
+                                            setSheetState(() {
+                                              isLoading = false;
+                                            });
+
+                                            // 5. Bottom sheet'i kapat
+                                            if (Navigator.canPop(
+                                              sheetContext,
+                                            )) {
+                                              Navigator.pop(sheetContext);
+                                            }
+
+                                            // 6. MOUNTED CHECK (Navigator.pop sonrası)
+                                            if (!mounted) return;
+
+                                            // 7. Sadece başarılı satın almada dialog göster
+                                            // İptal edildiğinde (success=false) sessizce kapat
+                                            if (success) {
+                                              showDialog(
+                                                context: context,
+                                                builder: (context) =>
+                                                    AlertDialog(
+                                                      backgroundColor: AppColors
+                                                          .cardBackground,
+                                                      title: Text(
+                                                        t('success_title'),
+                                                        style: const TextStyle(
+                                                          color: AppColors.gold,
+                                                        ),
+                                                      ),
+                                                      content: Text(
+                                                        t('success_body'),
+                                                        style: const TextStyle(
+                                                          color: Colors.white,
+                                                        ),
+                                                      ),
+                                                      actions: [
+                                                        TextButton(
+                                                          child: const Text(
+                                                            "Tamam",
+                                                            style: TextStyle(
+                                                              color: AppColors
+                                                                  .gold,
+                                                            ),
+                                                          ),
+                                                          onPressed: () =>
+                                                              Navigator.pop(
+                                                                context,
+                                                              ),
+                                                        ),
+                                                      ],
+                                                    ),
+                                              );
+                                            }
+                                            // İptal veya hata durumunda hiçbir şey gösterme
+                                          } catch (e) {
+                                            // 8. HATA YAKALAMA
+                                            debugPrint(
+                                              'Purchase error in UI: $e',
+                                            );
+
+                                            // 9. MOUNTED CHECK (catch bloğunda)
+                                            if (!mounted) return;
+
+                                            // Loading state'i kapat
+                                            setSheetState(() {
+                                              isLoading = false;
+                                            });
+
+                                            // Bottom sheet'i kapat (sessizce)
+                                            if (Navigator.canPop(
+                                              sheetContext,
+                                            )) {
+                                              Navigator.pop(sheetContext);
+                                            }
+                                            // Hata durumunda da hiçbir mesaj gösterme
+                                            // Kullanıcı zaten iptal ettiğini biliyor
+                                          }
+                                        },
+                                  borderRadius: BorderRadius.circular(16),
+                                  child: Padding(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 20,
+                                      vertical: 16,
+                                    ),
+                                    child: isLoading
+                                        ? const Center(
+                                            child: CircularProgressIndicator(
+                                              color: AppColors.gold,
+                                              strokeWidth: 2,
+                                            ),
+                                          )
+                                        : Row(
+                                            children: [
+                                              // Leading Icon
+                                              Icon(
+                                                tierIcon,
+                                                color: AppColors.gold,
+                                                size: 24,
+                                              ),
+                                              const SizedBox(width: 15),
+
+                                              // Title & Subtitle
+                                              Expanded(
+                                                child: Column(
+                                                  crossAxisAlignment:
+                                                      CrossAxisAlignment.start,
+                                                  children: [
+                                                    Text(
+                                                      tierName,
+                                                      style: const TextStyle(
+                                                        color: Colors.white,
+                                                        fontWeight:
+                                                            FontWeight.bold,
+                                                        fontSize: 16,
+                                                      ),
+                                                    ),
+                                                  ],
+                                                ),
+                                              ),
+
+                                              // Price Tag
+                                              Container(
+                                                padding:
+                                                    const EdgeInsets.symmetric(
+                                                      horizontal: 14,
+                                                      vertical: 8,
+                                                    ),
+                                                decoration: BoxDecoration(
+                                                  color:
+                                                      AppColors.gold, // Gold BG
+                                                  borderRadius:
+                                                      BorderRadius.circular(20),
+                                                ),
+                                                child: Text(
+                                                  package
+                                                      .storeProduct
+                                                      .priceString,
+                                                  style: const TextStyle(
+                                                    color: Color(
+                                                      0xFF0F172A,
+                                                    ), // Dark Text (Navy/Black)
+                                                    fontWeight: FontWeight.bold,
+                                                    fontSize: 14,
+                                                  ),
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                  ),
+                                ),
+                              ),
+                            );
+                          },
+                        );
+                      },
+                    ),
                   ),
-                  const SizedBox(width: 8),
-                  Text(
-                    t('secure_payment'), // "Güvenli Ödeme & Gizli Bağış"
-                    style: const TextStyle(color: Colors.white38, fontSize: 12),
+
+                  const SizedBox(height: 20),
+                  // 5. Footer
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const Icon(
+                        Icons.verified_user,
+                        color: AppColors.gold,
+                        size: 16,
+                      ),
+                      const SizedBox(width: 8),
+                      Text(
+                        t('secure_payment'), // "Güvenli Ödeme & Gizli Bağış"
+                        style: const TextStyle(
+                          color: Colors.white38,
+                          fontSize: 12,
+                        ),
+                      ),
+                    ],
+                  ),
+
+                  // Safe area padding
+                  SizedBox(
+                    height: MediaQuery.of(sheetContext).padding.bottom + 10,
                   ),
                 ],
               ),
-
-              // Safe area padding
-              SizedBox(height: MediaQuery.of(sheetContext).padding.bottom + 10),
-            ],
-          ),
+            );
+          },
         );
       },
+    );
+  }
+
+  Widget _buildCompactBenefit({
+    required IconData icon,
+    required String titleTr,
+    required String titleEn,
+    required String subtitleTr,
+    required String subtitleEn,
+  }) {
+    final isTurkish = GlobalSettings.currentLanguage == 'tr';
+
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // Icon (Yeşil, sol taraf)
+        Icon(icon, color: Colors.green.shade400, size: 22),
+        const SizedBox(width: 12),
+        // Text Column (Başlık + Açıklama)
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                isTurkish ? titleTr : titleEn,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 14,
+                ),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                isTurkish ? subtitleTr : subtitleEn,
+                style: TextStyle(
+                  color: Colors.grey.shade400,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w400,
+                  height: 1.3,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
     );
   }
 }
