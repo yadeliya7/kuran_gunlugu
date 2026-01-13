@@ -69,12 +69,14 @@ final Map<String, Map<String, String>> dictionary = {
     'support_footer':
         'Desteğiniz, sunucu masrafları ve uygulamanın geliştirilmesi için kullanılacaktır.',
     'donation_tier_1': 'Uygulamaya Destek',
-    'donation_tier_2': 'Projeye Katkı',
+    'donation_tier_2': 'Projeye Destek',
     'donation_tier_3': 'Geliştirmeye Destek',
     'donation_tier_default': 'Destek Ol',
     'success_title': 'Teşekkürler',
     'success_body':
         'Desteğiniz bizim için çok değerli. Katkılarınızla uygulamayı geliştirmeye devam edeceğiz.',
+    'secure_payment': 'Güvenli Ödeme & Gizli Bağış',
+    'support_gold_subtitle': 'Bu hayra ortak olun ✨',
   },
   'en': {
     'app_name': 'Quran Diary',
@@ -150,6 +152,8 @@ final Map<String, Map<String, String>> dictionary = {
     'success_title': 'Thank You',
     'success_body':
         'Your support is very valuable to us. We will continue to develop the app with your contributions.',
+    'secure_payment': 'Secure Payment & Anonymous Donation',
+    'support_gold_subtitle': 'Support this Good Cause ✨',
   },
 };
 
