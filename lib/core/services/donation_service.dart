@@ -10,7 +10,7 @@ class DonationService {
 
   DonationService._internal();
 
-  static const _apiKey = 'test_hSGyLWAsUtcTzXYonXHfMbxbwal';
+  static const _apiKey = 'appl_TvDhEzKItnkNKGFLiVxWkhywiRW';
 
   Future<void> init() async {
     await Purchases.setLogLevel(LogLevel.debug);
