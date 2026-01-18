@@ -10,16 +10,18 @@ class DonationService {
 
   DonationService._internal();
 
-  static const _apiKey = 'appl_TvDhEzKItnkNKGFLiVxWkhywiRW';
+  static const _iosApiKey = 'appl_TvDhEzKItnkNKGFLiVxWkhywiRW';
 
+  // Android Anahtarın (RevenueCat'ten aldığın 'goog_' ile başlayan kodu buraya yapıştır)
+  static const _androidApiKey = 'goog_MrXcpYPMbkefyejyGKZMhlGBJHH';
   Future<void> init() async {
     await Purchases.setLogLevel(LogLevel.debug);
 
     PurchasesConfiguration configuration;
     if (Platform.isAndroid) {
-      configuration = PurchasesConfiguration(_apiKey);
+      configuration = PurchasesConfiguration(_androidApiKey);
     } else if (Platform.isIOS) {
-      configuration = PurchasesConfiguration(_apiKey);
+      configuration = PurchasesConfiguration(_iosApiKey);
     } else {
       return;
     }
