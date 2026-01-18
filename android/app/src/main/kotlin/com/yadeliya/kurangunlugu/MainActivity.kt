@@ -1,4 +1,4 @@
-package com.example.kuran_gunlugu
+package com.yadeliya.kurangunlugu
 
 import io.flutter.embedding.android.FlutterActivity
 
