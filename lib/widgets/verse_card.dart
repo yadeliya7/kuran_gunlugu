@@ -28,6 +28,9 @@ class VerseCard extends StatelessWidget {
 
     return Container(
       width: double.infinity,
+      constraints: const BoxConstraints(
+        minHeight: 320, // Increased minimum height for better spacing
+      ),
       decoration: BoxDecoration(
         gradient: LinearGradient(
           begin: Alignment.topLeft,
