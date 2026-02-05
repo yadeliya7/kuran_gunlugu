@@ -625,7 +625,9 @@ class _HomeScreenState extends State<HomeScreen> {
 
                       // Verse Content
                       SizedBox(
-                        height: MediaQuery.of(context).size.height * 0.6,
+                        height:
+                            MediaQuery.of(context).size.height *
+                            0.75, // Increased from 0.6 to 0.75
                         child: _buildAyetContent(),
                       ),
                     ],
