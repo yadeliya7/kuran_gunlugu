@@ -23,6 +23,8 @@ import '../widgets/date_navigation.dart';
 import '../widgets/verse_card.dart';
 import '../widgets/action_buttons.dart';
 import '../widgets/share_card.dart';
+import '../widgets/prayer_times_card.dart';
+import '../widgets/prayer_times_bottom_sheet.dart';
 import 'settings_screen.dart';
 import 'premium_screen.dart';
 import 'favorites_screen.dart';
@@ -252,7 +254,7 @@ class _HomeScreenState extends State<HomeScreen> {
             Text(
               t('note_title'),
               style: const TextStyle(
-                color: AppColors.gold,
+                color: Color(0xFFD4AF37),
                 fontSize: 18,
                 fontWeight: FontWeight.bold,
               ),
@@ -609,10 +611,29 @@ class _HomeScreenState extends State<HomeScreen> {
 
               const SizedBox(height: 20),
 
-              // 3. İçerik
-              Expanded(child: Container(child: _buildAyetContent())),
+              // 3. İçerik (Scrollable)
+              Expanded(
+                child: SingleChildScrollView(
+                  child: Column(
+                    children: [
+                      // Prayer Times Card
+                      PrayerTimesCard(
+                        onTap: () => showPrayerTimesBottomSheet(context),
+                      ),
 
-              const SizedBox(height: 20),
+                      const SizedBox(height: 20),
+
+                      // Verse Content
+                      SizedBox(
+                        height: MediaQuery.of(context).size.height * 0.6,
+                        child: _buildAyetContent(),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+
+              const SizedBox(height: 10),
             ],
           ),
         ),
