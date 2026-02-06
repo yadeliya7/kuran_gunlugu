@@ -97,10 +97,21 @@ final Map<String, Map<String, String>> dictionary = {
     'time_remaining_iftar': 'İFTARA KALAN SÜRE',
     'time_remaining_sunrise': 'GÜNEŞİN DOĞUŞUNA',
     'time_remaining_general': 'VAKTİNE KALAN',
-    'prayer_times_title': 'İmsakiye - Namaz Vakitleri',
+    // Prayer Times
+    'prayer_times_title': 'İmsakiye - Namaz Vakitleri', // Used during Ramadan
+    'prayer_times_title_regular': 'Namaz Vakitleri', // Used outside Ramadan
     'table_date': 'Tarih',
     'loading': 'Yükleniyor...',
     'location_default': 'Konumunuz',
+    // Prayer Notification Settings
+    'prayer_notif_title': 'Namaz Bildirimleri',
+    'prayer_notif_toggle': 'Namaz vakti hatırlatıcıları',
+    'prayer_notif_desc': 'Her namaz vaktinden 15 dakika önce bildirim',
+    'prayer_notif_fajr': 'Sabah namazına 15 dakika kaldı 🕌',
+    'prayer_notif_dhuhr': 'Öğle namazına 15 dakika kaldı 🕌',
+    'prayer_notif_asr': 'İkindi namazına 15 dakika kaldı 🕌',
+    'prayer_notif_maghrib': 'Akşam namazına 15 dakika kaldı 🕌',
+    'prayer_notif_isha': 'Yatsı namazına 15 dakika kaldı 🕌',
   },
   'en': {
     'app_name': 'Quran Diary',
@@ -198,10 +209,21 @@ final Map<String, Map<String, String>> dictionary = {
     'time_remaining_iftar': 'TIME TO IFTAR',
     'time_remaining_sunrise': 'TIME TO SUNRISE',
     'time_remaining_general': 'REMAINING TO',
-    'prayer_times_title': 'Imsakiye - Prayer Times',
+    // Prayer Times
+    'prayer_times_title': 'Imsakiye - Prayer Times', // Used during Ramadan
+    'prayer_times_title_regular': 'Prayer Times', // Used outside Ramadan
     'table_date': 'Date',
     'loading': 'Loading...',
     'location_default': 'Your Location',
+    // Prayer Notification Settings
+    'prayer_notif_title': 'Prayer Notifications',
+    'prayer_notif_toggle': 'Prayer time reminders',
+    'prayer_notif_desc': '15 minutes before each prayer',
+    'prayer_notif_fajr': '15 minutes until Morning prayer 🕌',
+    'prayer_notif_dhuhr': '15 minutes until Dhuhr prayer 🕌',
+    'prayer_notif_asr': '15 minutes until Asr prayer 🕌',
+    'prayer_notif_maghrib': '15 minutes until Maghrib prayer 🕌',
+    'prayer_notif_isha': '15 minutes until Isha prayer 🕌',
   },
 };
 

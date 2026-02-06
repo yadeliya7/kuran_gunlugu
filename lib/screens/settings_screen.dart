@@ -10,6 +10,7 @@ import '../core/services/global_settings.dart';
 import '../core/services/hafiz_service.dart';
 import '../core/services/donation_service.dart';
 import '../core/services/prayer_times_service.dart';
+import '../core/services/notification_service.dart';
 import 'about_screen.dart';
 
 class SettingsScreen extends StatefulWidget {
@@ -22,6 +23,7 @@ class _SettingsScreenState extends State<SettingsScreen>
     with WidgetsBindingObserver {
   bool bildirimIzniVar = false;
   String _selectedPrayerMethod = 'auto'; // Default to auto
+  bool _prayerNotificationsEnabled = false;
 
   @override
   void initState() {
@@ -29,6 +31,7 @@ class _SettingsScreenState extends State<SettingsScreen>
     WidgetsBinding.instance.addObserver(this);
     _izinDurumunuKontrolEt();
     _loadPrayerMethod(); // Load saved prayer method
+    _loadPrayerNotificationsSetting(); // Load prayer notifications setting
     HafizYonetimi.hafizYukle().then((_) {
       if (mounted) setState(() {});
     });
@@ -100,6 +103,31 @@ class _SettingsScreenState extends State<SettingsScreen>
       });
       Navigator.pop(context); // Close dialog
     }
+  }
+
+  // Prayer Notifications Management
+  Future<void> _loadPrayerNotificationsSetting() async {
+    final prefs = await SharedPreferences.getInstance();
+    final enabled = prefs.getBool('prayer_notifications_enabled') ?? false;
+    if (mounted) {
+      setState(() {
+        _prayerNotificationsEnabled = enabled;
+      });
+    }
+  }
+
+  Future<void> _togglePrayerNotifications(bool value) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool('prayer_notifications_enabled', value);
+
+    if (mounted) {
+      setState(() {
+        _prayerNotificationsEnabled = value;
+      });
+    }
+
+    // Re-schedule prayer notifications
+    await BildirimServisi.namazBildirimleriniKur();
   }
 
   String _getPrayerMethodName(String methodKey) {
@@ -572,6 +600,55 @@ class _SettingsScreenState extends State<SettingsScreen>
                       ),
                     ],
                   ),
+                ),
+              ),
+
+              const SizedBox(height: 30),
+
+              // Prayer Notifications Toggle
+              Text(
+                t('prayer_notif_title'),
+                style: const TextStyle(color: Colors.white54, fontSize: 14),
+              ),
+              const SizedBox(height: 10),
+              Container(
+                padding: const EdgeInsets.all(15),
+                decoration: BoxDecoration(
+                  color: AppColors.cardBackground,
+                  borderRadius: BorderRadius.circular(15),
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            t('prayer_notif_toggle'),
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            t('prayer_notif_desc'),
+                            style: const TextStyle(
+                              color: Colors.white54,
+                              fontSize: 12,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    Switch(
+                      value: _prayerNotificationsEnabled,
+                      onChanged: _togglePrayerNotifications,
+                      activeColor: AppColors.gold,
+                    ),
+                  ],
                 ),
               ),
 
