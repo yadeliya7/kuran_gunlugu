@@ -30,64 +30,89 @@ void showPrayerTimesBottomSheet(BuildContext context) {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Header
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                // Header with decorative background
+                Stack(
                   children: [
-                    Expanded(
-                      child: FittedBox(
-                        alignment: Alignment.centerLeft,
-                        fit: BoxFit.scaleDown,
-                        child: Text(
-                          t('prayer_times_title'),
-                          style: TextStyle(
-                            color: AppColors.gold,
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
+                    // Background decorative image
+                    Positioned.fill(
+                      child: Align(
+                        alignment: Alignment.topCenter,
+                        child: Opacity(
+                          opacity: 0.12,
+                          child: Image.asset(
+                            'assets/images/cami_motif_tr.png',
+                            width: double.infinity,
+                            fit: BoxFit.cover,
                           ),
                         ),
                       ),
                     ),
-                    IconButton(
-                      onPressed: () => Navigator.pop(context),
-                      icon: const Icon(Icons.close, color: AppColors.textWhite),
-                    ),
-                  ],
-                ),
-
-                const SizedBox(height: 10),
-
-                // Location Info
-                FutureBuilder<void>(
-                  future: PrayerTimesService.getCoordinates(),
-                  builder: (context, snapshot) {
-                    final city = PrayerTimesService.getCityName();
-                    final localizedCity =
-                        city == 'Konumunuz' || city == 'Your Location'
-                        ? t('location_default')
-                        : city;
-
-                    return Row(
+                    // Foreground content
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Icon(
-                          Icons.location_on,
-                          color: AppColors.gold,
-                          size: 14,
-                        ),
-                        const SizedBox(width: 4),
-                        Expanded(
-                          child: Text(
-                            localizedCity,
-                            style: TextStyle(
-                              color: AppColors.textGrey,
-                              fontSize: 12,
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Expanded(
+                              child: FittedBox(
+                                alignment: Alignment.centerLeft,
+                                fit: BoxFit.scaleDown,
+                                child: Text(
+                                  t('prayer_times_title'),
+                                  style: TextStyle(
+                                    color: AppColors.gold,
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ),
                             ),
-                            overflow: TextOverflow.ellipsis,
-                          ),
+                            IconButton(
+                              onPressed: () => Navigator.pop(context),
+                              icon: const Icon(
+                                Icons.close,
+                                color: AppColors.textWhite,
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 10),
+                        // Location Info
+                        FutureBuilder<void>(
+                          future: PrayerTimesService.getCoordinates(),
+                          builder: (context, snapshot) {
+                            final city = PrayerTimesService.getCityName();
+                            final localizedCity =
+                                city == 'Konumunuz' || city == 'Your Location'
+                                ? t('location_default')
+                                : city;
+
+                            return Row(
+                              children: [
+                                const Icon(
+                                  Icons.location_on,
+                                  color: AppColors.gold,
+                                  size: 14,
+                                ),
+                                const SizedBox(width: 4),
+                                Expanded(
+                                  child: Text(
+                                    localizedCity,
+                                    style: TextStyle(
+                                      color: AppColors.textGrey,
+                                      fontSize: 12,
+                                    ),
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                              ],
+                            );
+                          },
                         ),
                       ],
-                    );
-                  },
+                    ),
+                  ],
                 ),
 
                 const SizedBox(height: 16),
