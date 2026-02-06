@@ -47,10 +47,29 @@ class BildirimServisi {
   }
 
   static Future<void> gunlukBildirimKur() async {
-    // 1. Önceki tüm planları temizle (Temiz sayfa açıyoruz)
-    await _notifications.cancelAll();
-
     try {
+      // Check if verse notifications are enabled
+      final prefs = await SharedPreferences.getInstance();
+      final bool verseNotificationsEnabled =
+          prefs.getBool('verse_notifications_enabled') ?? true; // Default ON
+
+      if (!verseNotificationsEnabled) {
+        // Cancel all verse notifications (IDs 0-199)
+        for (int i = 0; i < 200; i++) {
+          await _notifications.cancel(i);
+        }
+        debugPrint('📵 Ayet bildirimleri kapalı, bildirimler iptal edildi.');
+        return;
+      }
+
+      debugPrint('🕌 Ayet bildirimleri kuruluyor...');
+
+      // 1. Tüm eski bildirimleri iptal et
+      for (int i = 0; i < 200; i++) {
+        await _notifications.cancel(i);
+      }
+
+      // 2. Şu anki saati al
       final now = tz.TZDateTime.now(tz.local);
 
       // SABAH VAKTİ HESABI (Standart)
@@ -224,6 +243,7 @@ class BildirimServisi {
                   importance: Importance.high,
                   priority: Priority.high,
                   color: Color(0xFFD4AF37),
+                  icon: 'notification_icon',
                 ),
                 iOS: DarwinNotificationDetails(),
               ),

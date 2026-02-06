@@ -24,6 +24,7 @@ class _SettingsScreenState extends State<SettingsScreen>
   bool bildirimIzniVar = false;
   String _selectedPrayerMethod = 'auto'; // Default to auto
   bool _prayerNotificationsEnabled = false;
+  bool _verseNotificationsEnabled = false;
 
   @override
   void initState() {
@@ -32,6 +33,7 @@ class _SettingsScreenState extends State<SettingsScreen>
     _izinDurumunuKontrolEt();
     _loadPrayerMethod(); // Load saved prayer method
     _loadPrayerNotificationsSetting(); // Load prayer notifications setting
+    _loadVerseNotificationsSetting(); // Load verse notifications setting
     HafizYonetimi.hafizYukle().then((_) {
       if (mounted) setState(() {});
     });
@@ -106,6 +108,17 @@ class _SettingsScreenState extends State<SettingsScreen>
   }
 
   // Prayer Notifications Management
+  /// Load verse notifications setting from SharedPreferences
+  Future<void> _loadVerseNotificationsSetting() async {
+    final prefs = await SharedPreferences.getInstance();
+    if (mounted) {
+      setState(() {
+        _verseNotificationsEnabled =
+            prefs.getBool('verse_notifications_enabled') ?? true; // Default ON
+      });
+    }
+  }
+
   Future<void> _loadPrayerNotificationsSetting() async {
     final prefs = await SharedPreferences.getInstance();
     final enabled = prefs.getBool('prayer_notifications_enabled') ?? false;
@@ -128,6 +141,21 @@ class _SettingsScreenState extends State<SettingsScreen>
 
     // Re-schedule prayer notifications
     await BildirimServisi.namazBildirimleriniKur();
+  }
+
+  /// Toggle verse notifications on/off
+  Future<void> _toggleVerseNotifications(bool value) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool('verse_notifications_enabled', value);
+
+    if (mounted) {
+      setState(() {
+        _verseNotificationsEnabled = value;
+      });
+    }
+
+    // Re-schedule verse notifications
+    await BildirimServisi.gunlukBildirimKur();
   }
 
   String _getPrayerMethodName(String methodKey) {
@@ -605,14 +633,19 @@ class _SettingsScreenState extends State<SettingsScreen>
 
               const SizedBox(height: 30),
 
-              // Prayer Notifications Toggle
+              // === REMINDERS SECTION ===
               Text(
-                t('prayer_notif_title'),
+                t('reminders_section'),
                 style: const TextStyle(color: Colors.white54, fontSize: 14),
               ),
-              const SizedBox(height: 10),
+              const SizedBox(height: 15),
+
+              // Verse Notifications Toggle
               Container(
-                padding: const EdgeInsets.all(15),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 15,
+                  vertical: 12,
+                ),
                 decoration: BoxDecoration(
                   color: AppColors.cardBackground,
                   borderRadius: BorderRadius.circular(15),
@@ -620,28 +653,37 @@ class _SettingsScreenState extends State<SettingsScreen>
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            t('prayer_notif_toggle'),
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            t('prayer_notif_desc'),
-                            style: const TextStyle(
-                              color: Colors.white54,
-                              fontSize: 12,
-                            ),
-                          ),
-                        ],
-                      ),
+                    Text(
+                      t('verse_notif_toggle'),
+                      style: const TextStyle(color: Colors.white, fontSize: 16),
+                    ),
+                    Switch(
+                      value: _verseNotificationsEnabled,
+                      onChanged: _toggleVerseNotifications,
+                      activeColor: AppColors.gold,
+                    ),
+                  ],
+                ),
+              ),
+
+              const SizedBox(height: 12),
+
+              // Prayer Notifications Toggle
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 15,
+                  vertical: 12,
+                ),
+                decoration: BoxDecoration(
+                  color: AppColors.cardBackground,
+                  borderRadius: BorderRadius.circular(15),
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      t('prayer_notif_title'),
+                      style: const TextStyle(color: Colors.white, fontSize: 16),
                     ),
                     Switch(
                       value: _prayerNotificationsEnabled,

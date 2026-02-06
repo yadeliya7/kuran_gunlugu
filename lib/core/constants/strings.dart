@@ -104,7 +104,6 @@ final Map<String, Map<String, String>> dictionary = {
     'loading': 'Yükleniyor...',
     'location_default': 'Konumunuz',
     // Prayer Notification Settings
-    'prayer_notif_title': 'Namaz Bildirimleri',
     'prayer_notif_toggle': 'Namaz vakti hatırlatıcıları',
     'prayer_notif_desc': 'Her namaz vaktinden 15 dakika önce bildirim',
     'prayer_notif_fajr': 'Sabah namazına 15 dakika kaldı 🕌',
@@ -112,6 +111,12 @@ final Map<String, Map<String, String>> dictionary = {
     'prayer_notif_asr': 'İkindi namazına 15 dakika kaldı 🕌',
     'prayer_notif_maghrib': 'Akşam namazına 15 dakika kaldı 🕌',
     'prayer_notif_isha': 'Yatsı namazına 15 dakika kaldı 🕌',
+    'prayer_notif_test': 'Test Bildirimi Gönder',
+    'prayer_notif_test_sent': '✅ Test bildirimi 5 saniye sonra gelecek!',
+    // Reminders Section
+    'reminders_section': 'Hatırlatıcılar',
+    'verse_notif_toggle': 'Günlük Ayet Hatırlatıcıları',
+    'prayer_notif_title': 'Namaz Vakti Hatırlatıcıları',
   },
   'en': {
     'app_name': 'Quran Diary',
@@ -216,7 +221,6 @@ final Map<String, Map<String, String>> dictionary = {
     'loading': 'Loading...',
     'location_default': 'Your Location',
     // Prayer Notification Settings
-    'prayer_notif_title': 'Prayer Notifications',
     'prayer_notif_toggle': 'Prayer time reminders',
     'prayer_notif_desc': '15 minutes before each prayer',
     'prayer_notif_fajr': '15 minutes until Morning prayer 🕌',
@@ -224,6 +228,12 @@ final Map<String, Map<String, String>> dictionary = {
     'prayer_notif_asr': '15 minutes until Asr prayer 🕌',
     'prayer_notif_maghrib': '15 minutes until Maghrib prayer 🕌',
     'prayer_notif_isha': '15 minutes until Isha prayer 🕌',
+    'prayer_notif_test': 'Send Test Notification',
+    'prayer_notif_test_sent': '✅ Test notification will arrive in 5 seconds!',
+    // Reminders Section
+    'reminders_section': 'Reminders',
+    'verse_notif_toggle': 'Daily Verse Reminders',
+    'prayer_notif_title': 'Prayer Time Reminders',
   },
 };
 
