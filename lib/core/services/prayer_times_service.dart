@@ -2,6 +2,7 @@ import 'package:adhan/adhan.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter/material.dart';
+import 'global_settings.dart'; // Added GlobalSettings import
 
 class PrayerTimesService {
   // Default location: Istanbul, Turkey
@@ -32,6 +33,26 @@ class PrayerTimesService {
         'Zilkade',
         'Zilhicce',
       ];
+
+      // English month names for Hijri calendar
+      const englishMonths = [
+        'Muharram',
+        'Safar',
+        'Rabi’ al-Awwal',
+        'Rabi’ al-Thani',
+        'Jumada al-Awwal',
+        'Jumada al-Thani',
+        'Rajab',
+        'Sha’ban',
+        'Ramadan',
+        'Shawwal',
+        'Dhu al-Qi’dah',
+        'Dhu al-Hijjah',
+      ];
+
+      final months = GlobalSettings.currentLanguage == 'tr'
+          ? turkishMonths
+          : englishMonths;
 
       // Convert Gregorian to Julian Day Number
       int d = date.day;
@@ -73,7 +94,7 @@ class PrayerTimesService {
       if (hMonth < 1 || hMonth > 12) return '';
       if (hDay < 1 || hDay > 30) return '';
 
-      final monthName = turkishMonths[hMonth - 1];
+      final monthName = months[hMonth - 1];
       return '$hDay $monthName';
     } catch (e) {
       debugPrint('❌ Hicri Tarih Hatası: $e');
@@ -172,6 +193,64 @@ class PrayerTimesService {
   /// Get city name
   static String getCityName() => _cityName;
 
+  /// Clear cached prayer times (call when settings change)
+  static void clearCache() {
+    _cachedPrayerTimes = null;
+    _cachedDate = null;
+    debugPrint('🗑️ Prayer times cache cleared');
+  }
+
+  /// Get calculation method based on user preference
+  static Future<CalculationMethod> _getCalculationMethod(
+    Coordinates coords,
+  ) async {
+    final prefs = await SharedPreferences.getInstance();
+    final methodKey = prefs.getString('prayer_calculation_method') ?? 'auto';
+
+    // If auto, detect based on location
+    if (methodKey == 'auto') {
+      return _getAutoMethod(coords);
+    }
+
+    // Map string to CalculationMethod
+    switch (methodKey) {
+      case 'turkey':
+        return CalculationMethod.turkey;
+      case 'mwl':
+        return CalculationMethod.muslim_world_league;
+      case 'isna':
+        return CalculationMethod.north_america;
+      case 'makkah':
+        return CalculationMethod.umm_al_qura;
+      case 'egypt':
+        return CalculationMethod.egyptian;
+      default:
+        return _getAutoMethod(coords); // Fallback to auto
+    }
+  }
+
+  /// Auto-detect calculation method based on coordinates
+  static CalculationMethod _getAutoMethod(Coordinates coords) {
+    final lat = coords.latitude;
+    final long = coords.longitude;
+
+    // Turkey bounds: 36° ≤ Lat ≤ 42° and 26° ≤ Long ≤ 45°
+    if (lat >= 36 && lat <= 42 && long >= 26 && long <= 45) {
+      debugPrint('📍 Auto-detection: Turkey');
+      return CalculationMethod.turkey;
+    }
+
+    // Americas: Long < -30
+    if (long < -30) {
+      debugPrint('📍 Auto-detection: North America');
+      return CalculationMethod.north_america;
+    }
+
+    // Default: Muslim World League (Europe/Global)
+    debugPrint('📍 Auto-detection: Muslim World League');
+    return CalculationMethod.muslim_world_league;
+  }
+
   /// Calculate prayer times for a given date
   static Future<PrayerTimes> getPrayerTimes([DateTime? date]) async {
     final targetDate = date ?? DateTime.now();
@@ -193,8 +272,9 @@ class PrayerTimesService {
     // Get coordinates (GPS or default Istanbul)
     final coords = await getCoordinates();
 
-    // CRITICAL: Use Turkey calculation method
-    final params = CalculationMethod.turkey.getParameters();
+    // Get calculation method (user preference or auto-detect)
+    final method = await _getCalculationMethod(coords);
+    final params = method.getParameters();
 
     // CRITICAL: Use Shafi (Standard) for Asr time to match Diyanet
     // Hanafi calculates Asr-ı Sani (late afternoon), which is ~45 mins later
@@ -225,12 +305,12 @@ class PrayerTimesService {
     final prayerTimes = await getPrayerTimes();
 
     final prayers = [
-      {'name': 'İmsak', 'time': prayerTimes.fajr, 'key': 'fajr'},
-      {'name': 'Güneş', 'time': prayerTimes.sunrise, 'key': 'sunrise'},
-      {'name': 'Öğle', 'time': prayerTimes.dhuhr, 'key': 'dhuhr'},
-      {'name': 'İkindi', 'time': prayerTimes.asr, 'key': 'asr'},
-      {'name': 'Akşam', 'time': prayerTimes.maghrib, 'key': 'maghrib'},
-      {'name': 'Yatsı', 'time': prayerTimes.isha, 'key': 'isha'},
+      {'time': prayerTimes.fajr, 'key': 'fajr'},
+      {'time': prayerTimes.sunrise, 'key': 'sunrise'},
+      {'time': prayerTimes.dhuhr, 'key': 'dhuhr'},
+      {'time': prayerTimes.asr, 'key': 'asr'},
+      {'time': prayerTimes.maghrib, 'key': 'maghrib'},
+      {'time': prayerTimes.isha, 'key': 'isha'},
     ];
 
     for (var i = 0; i < prayers.length; i++) {
@@ -244,7 +324,7 @@ class PrayerTimesService {
     final tomorrowPrayerTimes = await getPrayerTimes(
       now.add(const Duration(days: 1)),
     );
-    return {'name': 'İmsak', 'time': tomorrowPrayerTimes.fajr, 'key': 'fajr'};
+    return {'time': tomorrowPrayerTimes.fajr, 'key': 'fajr'};
   }
 
   /// Get both current (start) and next (end) prayer times for progress bar
@@ -253,12 +333,12 @@ class PrayerTimesService {
     final prayerTimes = await getPrayerTimes();
 
     final prayers = [
-      {'name': 'İmsak', 'time': prayerTimes.fajr, 'key': 'fajr'},
-      {'name': 'Güneş', 'time': prayerTimes.sunrise, 'key': 'sunrise'},
-      {'name': 'Öğle', 'time': prayerTimes.dhuhr, 'key': 'dhuhr'},
-      {'name': 'İkindi', 'time': prayerTimes.asr, 'key': 'asr'},
-      {'name': 'Akşam', 'time': prayerTimes.maghrib, 'key': 'maghrib'},
-      {'name': 'Yatsı', 'time': prayerTimes.isha, 'key': 'isha'},
+      {'time': prayerTimes.fajr, 'key': 'fajr'},
+      {'time': prayerTimes.sunrise, 'key': 'sunrise'},
+      {'time': prayerTimes.dhuhr, 'key': 'dhuhr'},
+      {'time': prayerTimes.asr, 'key': 'asr'},
+      {'time': prayerTimes.maghrib, 'key': 'maghrib'},
+      {'time': prayerTimes.isha, 'key': 'isha'},
     ];
 
     // Find next prayer index
@@ -278,11 +358,7 @@ class PrayerTimesService {
           now.subtract(const Duration(days: 1)),
         );
         return {
-          'current': {
-            'name': 'Yatsı',
-            'time': yesterdayPrayerTimes.isha,
-            'key': 'isha',
-          },
+          'current': {'time': yesterdayPrayerTimes.isha, 'key': 'isha'},
           'next': prayers[0],
         };
       }
@@ -298,11 +374,7 @@ class PrayerTimesService {
 
       return {
         'current': prayers.last, // Isha
-        'next': {
-          'name': 'İmsak',
-          'time': tomorrowPrayerTimes.fajr,
-          'key': 'fajr',
-        },
+        'next': {'time': tomorrowPrayerTimes.fajr, 'key': 'fajr'},
       };
     }
   }
@@ -313,12 +385,12 @@ class PrayerTimesService {
     final prayerTimes = await getPrayerTimes();
 
     final prayers = [
-      {'name': 'İmsak', 'time': prayerTimes.fajr, 'key': 'fajr'},
-      {'name': 'Güneş', 'time': prayerTimes.sunrise, 'key': 'sunrise'},
-      {'name': 'Öğle', 'time': prayerTimes.dhuhr, 'key': 'dhuhr'},
-      {'name': 'İkindi', 'time': prayerTimes.asr, 'key': 'asr'},
-      {'name': 'Akşam', 'time': prayerTimes.maghrib, 'key': 'maghrib'},
-      {'name': 'Yatsı', 'time': prayerTimes.isha, 'key': 'isha'},
+      {'time': prayerTimes.fajr, 'key': 'fajr'},
+      {'time': prayerTimes.sunrise, 'key': 'sunrise'},
+      {'time': prayerTimes.dhuhr, 'key': 'dhuhr'},
+      {'time': prayerTimes.asr, 'key': 'asr'},
+      {'time': prayerTimes.maghrib, 'key': 'maghrib'},
+      {'time': prayerTimes.isha, 'key': 'isha'},
     ];
 
     String? currentPrayer;
@@ -359,12 +431,5 @@ class PrayerTimesService {
       'maghrib': formatPrayerTime(prayerTimes.maghrib),
       'isha': formatPrayerTime(prayerTimes.isha),
     };
-  }
-
-  /// Clear cache (useful for testing)
-  static void clearCache() {
-    _cachedPrayerTimes = null;
-    _cachedDate = null;
-    _currentCoordinates = null;
   }
 }

@@ -9,6 +9,7 @@ import '../core/constants/strings.dart';
 import '../core/services/global_settings.dart';
 import '../core/services/hafiz_service.dart';
 import '../core/services/donation_service.dart';
+import '../core/services/prayer_times_service.dart';
 import 'about_screen.dart';
 
 class SettingsScreen extends StatefulWidget {
@@ -20,12 +21,14 @@ class SettingsScreen extends StatefulWidget {
 class _SettingsScreenState extends State<SettingsScreen>
     with WidgetsBindingObserver {
   bool bildirimIzniVar = false;
+  String _selectedPrayerMethod = 'auto'; // Default to auto
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     _izinDurumunuKontrolEt();
+    _loadPrayerMethod(); // Load saved prayer method
     HafizYonetimi.hafizYukle().then((_) {
       if (mounted) setState(() {});
     });
@@ -71,6 +74,167 @@ class _SettingsScreenState extends State<SettingsScreen>
     setState(() {
       GlobalSettings.fontSizeMultiplier = yeniBoyut;
     });
+  }
+
+  // Prayer Method Management
+  Future<void> _loadPrayerMethod() async {
+    final prefs = await SharedPreferences.getInstance();
+    final savedMethod = prefs.getString('prayer_calculation_method') ?? 'auto';
+    if (mounted) {
+      setState(() {
+        _selectedPrayerMethod = savedMethod;
+      });
+    }
+  }
+
+  Future<void> _savePrayerMethod(String method) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('prayer_calculation_method', method);
+
+    // Clear cache to force recalculation
+    PrayerTimesService.clearCache();
+
+    if (mounted) {
+      setState(() {
+        _selectedPrayerMethod = method;
+      });
+      Navigator.pop(context); // Close dialog
+    }
+  }
+
+  String _getPrayerMethodName(String methodKey) {
+    switch (methodKey) {
+      case 'auto':
+        return t('prayer_method_auto');
+      case 'turkey':
+        return t('prayer_method_turkey');
+      case 'mwl':
+        return t('prayer_method_mwl');
+      case 'isna':
+        return t('prayer_method_isna');
+      case 'makkah':
+        return t('prayer_method_makkah');
+      case 'egypt':
+        return t('prayer_method_egypt');
+      default:
+        return t('prayer_method_auto');
+    }
+  }
+
+  void _showPrayerMethodDialog() {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true, // Allow full height if needed
+      backgroundColor: const Color(0xFF1F2125),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) {
+        return DraggableScrollableSheet(
+          initialChildSize: 0.6, // Start at 60% height
+          minChildSize: 0.4,
+          maxChildSize: 0.9,
+          expand: false,
+          builder: (context, scrollController) {
+            return Container(
+              padding: const EdgeInsets.all(20),
+              child: SingleChildScrollView(
+                controller: scrollController,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      t('prayer_method_title'),
+                      style: const TextStyle(
+                        color: AppColors.gold,
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      t('prayer_method_subtitle'),
+                      style: const TextStyle(
+                        color: Colors.white54,
+                        fontSize: 13,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 20),
+                    _prayerMethodOption(
+                      'auto',
+                      Icons.settings_suggest,
+                      t('prayer_method_auto'),
+                      t('prayer_method_auto_desc'),
+                    ),
+                    _prayerMethodOption(
+                      'turkey',
+                      Icons.mosque,
+                      t('prayer_method_turkey'),
+                      null,
+                    ),
+                    _prayerMethodOption(
+                      'mwl',
+                      Icons.public,
+                      t('prayer_method_mwl'),
+                      null,
+                    ),
+                    _prayerMethodOption(
+                      'isna',
+                      Icons.location_city,
+                      t('prayer_method_isna'),
+                      null,
+                    ),
+                    _prayerMethodOption(
+                      'makkah',
+                      Icons.location_on,
+                      t('prayer_method_makkah'),
+                      null,
+                    ),
+                    _prayerMethodOption(
+                      'egypt',
+                      Icons.terrain,
+                      t('prayer_method_egypt'),
+                      null,
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  Widget _prayerMethodOption(
+    String key,
+    IconData icon,
+    String title,
+    String? subtitle,
+  ) {
+    bool isSelected = _selectedPrayerMethod == key;
+    return ListTile(
+      leading: Icon(icon, color: isSelected ? AppColors.gold : Colors.white54),
+      title: Text(
+        title,
+        style: TextStyle(
+          color: isSelected ? AppColors.gold : Colors.white,
+          fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+        ),
+      ),
+      subtitle: subtitle != null
+          ? Text(
+              subtitle,
+              style: const TextStyle(color: Colors.white38, fontSize: 12),
+            )
+          : null,
+      trailing: Icon(
+        isSelected ? Icons.radio_button_checked : Icons.radio_button_unchecked,
+        color: isSelected ? AppColors.gold : Colors.white54,
+      ),
+      onTap: () => _savePrayerMethod(key),
+    );
   }
 
   void _hafizSecimMenusuAc() {
@@ -346,6 +510,61 @@ class _SettingsScreenState extends State<SettingsScreen>
                           ),
                         ],
                       ),
+                      const Icon(
+                        Icons.arrow_forward_ios,
+                        color: Colors.white54,
+                        size: 18,
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+
+              const SizedBox(height: 30),
+
+              // Prayer Calculation Method Section
+              Text(
+                t('prayer_method_title'),
+                style: const TextStyle(color: Colors.white54, fontSize: 14),
+              ),
+              const SizedBox(height: 10),
+              GestureDetector(
+                onTap: _showPrayerMethodDialog,
+                child: Container(
+                  padding: const EdgeInsets.all(15),
+                  decoration: BoxDecoration(
+                    color: AppColors.cardBackground,
+                    borderRadius: BorderRadius.circular(15),
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              t('prayer_method_title'),
+                              style: const TextStyle(
+                                color: Colors.white54,
+                                fontSize: 12,
+                              ),
+                            ),
+                            const SizedBox(height: 5),
+                            Text(
+                              _getPrayerMethodName(_selectedPrayerMethod),
+                              style: const TextStyle(
+                                color: AppColors.gold,
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                              ),
+                              overflow: TextOverflow.ellipsis,
+                              maxLines: 2,
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(width: 10),
                       const Icon(
                         Icons.arrow_forward_ios,
                         color: Colors.white54,

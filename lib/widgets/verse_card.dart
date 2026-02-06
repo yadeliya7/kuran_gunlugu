@@ -28,9 +28,7 @@ class VerseCard extends StatelessWidget {
 
     return Container(
       width: double.infinity,
-      constraints: const BoxConstraints(
-        minHeight: 600, // Increased for taller verse display with scrolling
-      ),
+      // No minHeight - auto-size based on content
       decoration: BoxDecoration(
         gradient: LinearGradient(
           begin: Alignment.topLeft,
@@ -60,6 +58,8 @@ class VerseCard extends StatelessWidget {
         ],
       ),
       child: SingleChildScrollView(
+        physics:
+            const NeverScrollableScrollPhysics(), // Disable internal scroll - use parent's scroll
         padding: const EdgeInsets.all(25),
         child: Column(
           children: [

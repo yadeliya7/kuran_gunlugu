@@ -1,9 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../core/constants/colors.dart';
+import '../core/constants/strings.dart'; // Added strings import
+import '../core/services/global_settings.dart'; // Added GlobalSettings import
 import '../core/services/prayer_times_service.dart';
 
 void showPrayerTimesBottomSheet(BuildContext context) {
+  // Helper for localization
+  String t(String key) {
+    return dictionary[GlobalSettings.currentLanguage]?[key] ?? key;
+  }
+
   showModalBottomSheet(
     context: context,
     backgroundColor: AppColors.background,
@@ -27,12 +34,12 @@ void showPrayerTimesBottomSheet(BuildContext context) {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    const Expanded(
+                    Expanded(
                       child: FittedBox(
                         alignment: Alignment.centerLeft,
                         fit: BoxFit.scaleDown,
                         child: Text(
-                          'İmsakiye - 30 Günlük Namaz Vakitleri',
+                          t('prayer_times_title'),
                           style: TextStyle(
                             color: AppColors.gold,
                             fontSize: 18,
@@ -54,6 +61,12 @@ void showPrayerTimesBottomSheet(BuildContext context) {
                 FutureBuilder<void>(
                   future: PrayerTimesService.getCoordinates(),
                   builder: (context, snapshot) {
+                    final city = PrayerTimesService.getCityName();
+                    final localizedCity =
+                        city == 'Konumunuz' || city == 'Your Location'
+                        ? t('location_default')
+                        : city;
+
                     return Row(
                       children: [
                         const Icon(
@@ -64,7 +77,7 @@ void showPrayerTimesBottomSheet(BuildContext context) {
                         const SizedBox(width: 4),
                         Expanded(
                           child: Text(
-                            PrayerTimesService.getCityName(),
+                            localizedCity,
                             style: TextStyle(
                               color: AppColors.textGrey,
                               fontSize: 12,
@@ -90,81 +103,103 @@ void showPrayerTimesBottomSheet(BuildContext context) {
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Row(
-                    children: const [
+                    children: [
                       Expanded(
                         flex: 2,
-                        child: Text(
-                          'Tarih',
-                          style: TextStyle(
-                            color: AppColors.gold,
-                            fontWeight: FontWeight.bold,
-                            fontSize: 11,
+                        child: FittedBox(
+                          fit: BoxFit.scaleDown,
+                          alignment: Alignment.centerLeft,
+                          child: Text(
+                            t('table_date'),
+                            style: TextStyle(
+                              color: AppColors.gold,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 11,
+                            ),
                           ),
                         ),
                       ),
                       Expanded(
-                        child: Text(
-                          'İmsak',
-                          textAlign: TextAlign.center,
-                          style: TextStyle(
-                            color: AppColors.gold,
-                            fontWeight: FontWeight.bold,
-                            fontSize: 10,
+                        child: FittedBox(
+                          fit: BoxFit.scaleDown,
+                          child: Text(
+                            t('prayer_fajr'),
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                              color: AppColors.gold,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 10,
+                            ),
                           ),
                         ),
                       ),
                       Expanded(
-                        child: Text(
-                          'Güneş',
-                          textAlign: TextAlign.center,
-                          style: TextStyle(
-                            color: AppColors.gold,
-                            fontWeight: FontWeight.bold,
-                            fontSize: 10,
+                        child: FittedBox(
+                          fit: BoxFit.scaleDown,
+                          child: Text(
+                            t('prayer_sunrise'),
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                              color: AppColors.gold,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 10,
+                            ),
                           ),
                         ),
                       ),
                       Expanded(
-                        child: Text(
-                          'Öğle',
-                          textAlign: TextAlign.center,
-                          style: TextStyle(
-                            color: AppColors.gold,
-                            fontWeight: FontWeight.bold,
-                            fontSize: 10,
+                        child: FittedBox(
+                          fit: BoxFit.scaleDown,
+                          child: Text(
+                            t('prayer_dhuhr'),
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                              color: AppColors.gold,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 10,
+                            ),
                           ),
                         ),
                       ),
                       Expanded(
-                        child: Text(
-                          'İkindi',
-                          textAlign: TextAlign.center,
-                          style: TextStyle(
-                            color: AppColors.gold,
-                            fontWeight: FontWeight.bold,
-                            fontSize: 10,
+                        child: FittedBox(
+                          fit: BoxFit.scaleDown,
+                          child: Text(
+                            t('prayer_asr'),
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                              color: AppColors.gold,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 10,
+                            ),
                           ),
                         ),
                       ),
                       Expanded(
-                        child: Text(
-                          'Akşam',
-                          textAlign: TextAlign.center,
-                          style: TextStyle(
-                            color: AppColors.gold,
-                            fontWeight: FontWeight.bold,
-                            fontSize: 10,
+                        child: FittedBox(
+                          fit: BoxFit.scaleDown,
+                          child: Text(
+                            t('prayer_maghrib'),
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                              color: AppColors.gold,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 10,
+                            ),
                           ),
                         ),
                       ),
                       Expanded(
-                        child: Text(
-                          'Yatsı',
-                          textAlign: TextAlign.center,
-                          style: TextStyle(
-                            color: AppColors.gold,
-                            fontWeight: FontWeight.bold,
-                            fontSize: 10,
+                        child: FittedBox(
+                          fit: BoxFit.scaleDown,
+                          child: Text(
+                            t('prayer_isha'),
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                              color: AppColors.gold,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 10,
+                            ),
                           ),
                         ),
                       ),
@@ -208,9 +243,13 @@ void showPrayerTimesBottomSheet(BuildContext context) {
                           }
 
                           final times = snapshot.data!;
+                          // Localize date format
+                          final locale = GlobalSettings.currentLanguage == 'tr'
+                              ? 'tr'
+                              : 'en';
                           final formattedDate = DateFormat(
                             'dd MMM',
-                            'tr',
+                            locale,
                           ).format(date);
                           final isToday =
                               DateFormat('yyyyMMdd').format(date) ==
@@ -323,13 +362,16 @@ void showPrayerTimesBottomSheet(BuildContext context) {
 
 Widget _buildTimeCell(String time, bool isToday) {
   return Expanded(
-    child: Text(
-      time,
-      textAlign: TextAlign.center,
-      style: TextStyle(
-        color: isToday ? AppColors.textWhite : AppColors.textGrey,
-        fontSize: 11,
-        fontWeight: isToday ? FontWeight.w600 : FontWeight.normal,
+    child: FittedBox(
+      fit: BoxFit.scaleDown,
+      child: Text(
+        time,
+        textAlign: TextAlign.center,
+        style: TextStyle(
+          color: isToday ? AppColors.textWhite : AppColors.textGrey,
+          fontSize: 11,
+          fontWeight: isToday ? FontWeight.w600 : FontWeight.normal,
+        ),
       ),
     ),
   );
