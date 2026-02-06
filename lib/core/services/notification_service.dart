@@ -1,8 +1,10 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:timezone/data/latest.dart' as tz;
 import 'package:timezone/timezone.dart' as tz;
+import 'prayer_times_service.dart';
 
 class BildirimServisi {
   static final FlutterLocalNotificationsPlugin _notifications =
@@ -141,6 +143,140 @@ class BildirimServisi {
       );
     } catch (e) {
       debugPrint("❌ Bildirim hatası: $e");
+    }
+  }
+
+  static Future<void> namazBildirimleriniKur() async {
+    // Import PrayerTimesService and strings at the top if not already imported
+    final prefs = await SharedPreferences.getInstance();
+    final bool bildirimlerAktif =
+        prefs.getBool('prayer_notifications_enabled') ?? false;
+
+    // Cancel all prayer notifications (IDs 200-399) first
+    for (int id = 200; id <= 399; id++) {
+      await _notifications.cancel(id);
+    }
+
+    if (!bildirimlerAktif) {
+      debugPrint('📵 Namaz bildirimleri kapalı, bildirimler iptal edildi.');
+      return;
+    }
+
+    debugPrint('🕌 Namaz bildirimleri kuruluyor (7 günlük)...');
+
+    try {
+      final now = tz.TZDateTime.now(tz.local);
+
+      int notificationId = 200; // Start from ID 200
+
+      // Schedule for next 7 days
+      for (int day = 0; day < 7; day++) {
+        final targetDate = now.add(Duration(days: day));
+
+        // Get prayer times for this date
+        final prayerTimes = await PrayerTimesService.getPrayerTimes(
+          DateTime(targetDate.year, targetDate.month, targetDate.day),
+        );
+
+        // Define prayers to schedule (excluding sunrise)
+        final prayers = [
+          {'time': prayerTimes.fajr, 'key': 'fajr'},
+          {'time': prayerTimes.dhuhr, 'key': 'dhuhr'},
+          {'time': prayerTimes.asr, 'key': 'asr'},
+          {'time': prayerTimes.maghrib, 'key': 'maghrib'},
+          {'time': prayerTimes.isha, 'key': 'isha'},
+        ];
+
+        for (var prayer in prayers) {
+          final prayerTime = prayer['time'] as DateTime;
+          final prayerKey = prayer['key'] as String;
+
+          // Calculate notification time: 15 minutes before prayer
+          final notifTime = prayerTime.subtract(const Duration(minutes: 15));
+
+          // Only schedule if in the future
+          if (notifTime.isAfter(DateTime.now())) {
+            // Convert to TZDateTime
+            final tzNotifTime = tz.TZDateTime.from(notifTime, tz.local);
+
+            // Get localized message
+            String title;
+            String body;
+
+            if (Platform.localeName.startsWith('tr')) {
+              body = _getPrayerNotificationTextTR(prayerKey);
+              title = 'Namaz Vakti 🕌';
+            } else {
+              body = _getPrayerNotificationTextEN(prayerKey);
+              title = 'Prayer Time 🕌';
+            }
+
+            await _notifications.zonedSchedule(
+              notificationId,
+              title,
+              body,
+              tzNotifTime,
+              const NotificationDetails(
+                android: AndroidNotificationDetails(
+                  'namaz_hatirlatici',
+                  'Namaz Hatırlatıcıları',
+                  channelDescription: 'Namaz vakti hatırlatmaları',
+                  importance: Importance.high,
+                  priority: Priority.high,
+                  color: Color(0xFFD4AF37),
+                ),
+                iOS: DarwinNotificationDetails(),
+              ),
+              androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
+              uiLocalNotificationDateInterpretation:
+                  UILocalNotificationDateInterpretation.absoluteTime,
+            );
+
+            debugPrint(
+              '✅ Namaz bildirimi planlandı: $prayerKey - ${PrayerTimesService.formatPrayerTime(notifTime)} (ID: $notificationId)',
+            );
+            notificationId++;
+          }
+        }
+      }
+
+      debugPrint('✅ Namaz bildirimleri kuruldu (7 günlük plan).');
+    } catch (e) {
+      debugPrint('❌ Namaz bildirimi hatası: $e');
+    }
+  }
+
+  static String _getPrayerNotificationTextTR(String prayerKey) {
+    switch (prayerKey) {
+      case 'fajr':
+        return 'Sabah namazına 15 dakika kaldı 🕌';
+      case 'dhuhr':
+        return 'Öğle namazına 15 dakika kaldı 🕌';
+      case 'asr':
+        return 'İkindi namazına 15 dakika kaldı 🕌';
+      case 'maghrib':
+        return 'Akşam namazına 15 dakika kaldı 🕌';
+      case 'isha':
+        return 'Yatsı namazına 15 dakika kaldı 🕌';
+      default:
+        return 'Namaz vaktine 15 dakika kaldı 🕌';
+    }
+  }
+
+  static String _getPrayerNotificationTextEN(String prayerKey) {
+    switch (prayerKey) {
+      case 'fajr':
+        return '15 minutes until Morning prayer 🕌';
+      case 'dhuhr':
+        return '15 minutes until Dhuhr prayer 🕌';
+      case 'asr':
+        return '15 minutes until Asr prayer 🕌';
+      case 'maghrib':
+        return '15 minutes until Maghrib prayer 🕌';
+      case 'isha':
+        return '15 minutes until Isha prayer 🕌';
+      default:
+        return '15 minutes until prayer 🕌';
     }
   }
 

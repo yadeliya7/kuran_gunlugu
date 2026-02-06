@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
+import 'dart:math'; // Added for sin, cos, atan2, sqrt, pi
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
@@ -16,6 +17,7 @@ import '../core/services/global_settings.dart';
 import '../core/services/notification_service.dart';
 import '../core/services/hafiz_service.dart';
 import '../core/services/daily_verse_service.dart';
+import '../core/services/prayer_times_service.dart'; // Added for location tracking
 import '../models/ayet_model.dart';
 import '../models/yerel_veri.dart';
 import '../widgets/top_bar.dart';
@@ -36,7 +38,7 @@ class HomeScreen extends StatefulWidget {
   State<HomeScreen> createState() => _HomeScreenState();
 }
 
-class _HomeScreenState extends State<HomeScreen> {
+class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   late Future<AyetModel> futureAyet;
   DateTime seciliTarih = DateTime.now();
   final AudioPlayer _audioPlayer = AudioPlayer();
@@ -47,6 +49,10 @@ class _HomeScreenState extends State<HomeScreen> {
 
   // Counter to force Prayer Times Card refresh
   int _prayerTimesRefreshCounter = 0;
+
+  // Location tracking for travel detection
+  double? _lastKnownLatitude;
+  double? _lastKnownLongitude;
 
   String? kaydedilenNot;
   final TextEditingController _notController = TextEditingController();
@@ -59,11 +65,16 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this); // Add lifecycle observer
     seciliTarih = DateTime.now();
     _isLoading = false;
 
     futureAyet = ayetiGetir(seciliTarih);
     BildirimServisi.gunlukBildirimKur();
+    BildirimServisi.namazBildirimleriniKur(); // Re-schedule prayer notifications
+
+    // Initial location fetch
+    _fetchLocationAndPrayerTimes();
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) {
@@ -103,10 +114,109 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this); // Remove lifecycle observer
     _playerCompleteSubscription?.cancel();
     _audioPlayer.dispose();
     _notController.dispose();
     super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      debugPrint('📱 App resumed - Checking for location changes...');
+      _fetchLocationAndPrayerTimes();
+    }
+  }
+
+  /// Fetch current location and refresh prayer times if location changed significantly
+  Future<void> _fetchLocationAndPrayerTimes() async {
+    try {
+      final coords = await PrayerTimesService.getCoordinates();
+      final currentLat = coords.latitude;
+      final currentLon = coords.longitude;
+
+      // Check if this is first time or location changed significantly
+      bool shouldRefresh = false;
+
+      if (_lastKnownLatitude == null || _lastKnownLongitude == null) {
+        // First time - always refresh
+        shouldRefresh = true;
+        debugPrint('🆕 First location fetch');
+      } else {
+        // Calculate distance from last known location
+        final distance = _calculateDistance(
+          _lastKnownLatitude!,
+          _lastKnownLongitude!,
+          currentLat,
+          currentLon,
+        );
+
+        debugPrint(
+          '📏 Distance from last location: ${distance.toStringAsFixed(2)} km',
+        );
+
+        // Refresh if moved more than 10km
+        if (distance > 10) {
+          shouldRefresh = true;
+          debugPrint(
+            '🌍 Location changed significantly (${distance.toStringAsFixed(1)}km) - Refreshing prayer times',
+          );
+        }
+      }
+
+      if (shouldRefresh) {
+        // Update last known location
+        _lastKnownLatitude = currentLat;
+        _lastKnownLongitude = currentLon;
+
+        // Clear prayer times cache to force fresh calculation
+        PrayerTimesService.clearCache();
+
+        // Re-schedule prayer notifications with new location
+        await BildirimServisi.namazBildirimleriniKur();
+
+        // Trigger UI refresh for Prayer Times Card
+        if (mounted) {
+          setState(() {
+            _prayerTimesRefreshCounter++;
+            debugPrint(
+              '🔄 Prayer times refreshed for new location (#$_prayerTimesRefreshCounter)',
+            );
+          });
+        }
+      }
+    } catch (e) {
+      debugPrint('⚠️ Location fetch error: $e');
+    }
+  }
+
+  /// Calculate distance between two coordinates using Haversine formula
+  /// Returns distance in kilometers
+  double _calculateDistance(
+    double lat1,
+    double lon1,
+    double lat2,
+    double lon2,
+  ) {
+    const double earthRadiusKm = 6371.0;
+
+    final dLat = _degreesToRadians(lat2 - lat1);
+    final dLon = _degreesToRadians(lon2 - lon1);
+
+    final a =
+        (sin(dLat / 2) * sin(dLat / 2)) +
+        (cos(_degreesToRadians(lat1)) *
+            cos(_degreesToRadians(lat2)) *
+            sin(dLon / 2) *
+            sin(dLon / 2));
+
+    final c = 2 * atan2(sqrt(a), sqrt(1 - a));
+    return earthRadiusKm * c;
+  }
+
+  double _degreesToRadians(double degrees) {
+    return degrees * pi / 180;
   }
 
   void ayarlariAc() async {

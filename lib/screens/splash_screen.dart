@@ -47,6 +47,7 @@ class _SplashScreenState extends State<SplashScreen> {
       // Bildirim servisini başlat
       await BildirimServisi.baslat();
       BildirimServisi.gunlukBildirimKur();
+      BildirimServisi.namazBildirimleriniKur(); // Prayer notifications
     } catch (e) {
       debugPrint("⚠️ Bildirim servisi hatası (Önemli değil, devam et): $e");
     }
