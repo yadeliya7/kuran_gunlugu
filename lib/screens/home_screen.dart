@@ -45,6 +45,9 @@ class _HomeScreenState extends State<HomeScreen> {
   bool isFavorited = false;
   bool _isLoading = false;
 
+  // Counter to force Prayer Times Card refresh
+  int _prayerTimesRefreshCounter = 0;
+
   String? kaydedilenNot;
   final TextEditingController _notController = TextEditingController();
 
@@ -580,7 +583,21 @@ class _HomeScreenState extends State<HomeScreen> {
               TopBar(
                 isToday: isToday,
                 onGoToday: buguneGit,
-                onSettings: ayarlariAc,
+                onSettings: () async {
+                  await Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const SettingsScreen(),
+                    ),
+                  );
+                  // Refresh UI to update Prayer Times Card
+                  setState(() {
+                    _prayerTimesRefreshCounter++;
+                    debugPrint(
+                      '🔄 Returned from Settings - Refreshing UI #$_prayerTimesRefreshCounter',
+                    );
+                  });
+                },
                 onFavorites: () async {
                   final gelenTarih = await Navigator.push(
                     context,
@@ -616,20 +633,18 @@ class _HomeScreenState extends State<HomeScreen> {
                 child: SingleChildScrollView(
                   child: Column(
                     children: [
-                      // Prayer Times Card
+                      // Prayer Times Card - Key forces rebuild when counter changes
                       PrayerTimesCard(
+                        key: ValueKey(
+                          'prayer_times_$_prayerTimesRefreshCounter',
+                        ),
                         onTap: () => showPrayerTimesBottomSheet(context),
                       ),
 
                       const SizedBox(height: 20),
 
-                      // Verse Content
-                      SizedBox(
-                        height:
-                            MediaQuery.of(context).size.height *
-                            0.75, // Increased from 0.6 to 0.75
-                        child: _buildAyetContent(),
-                      ),
+                      // Verse Content - Full height, no cut-off
+                      _buildAyetContent(),
                     ],
                   ),
                 ),
@@ -650,21 +665,21 @@ class _HomeScreenState extends State<HomeScreen> {
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return Column(
+            mainAxisSize: MainAxisSize.min,
             children: [
-              Expanded(
-                child: Container(
-                  width: double.infinity,
-                  margin: const EdgeInsets.symmetric(
-                    horizontal: 24,
-                    vertical: 20,
-                  ),
-                  decoration: BoxDecoration(
-                    color: AppColors.cardBackground.withValues(alpha: 0.5),
-                    borderRadius: BorderRadius.circular(30),
-                  ),
-                  child: const Center(
-                    child: CircularProgressIndicator(color: AppColors.gold),
-                  ),
+              Container(
+                width: double.infinity,
+                height: 400,
+                margin: const EdgeInsets.symmetric(
+                  horizontal: 24,
+                  vertical: 20,
+                ),
+                decoration: BoxDecoration(
+                  color: AppColors.cardBackground.withValues(alpha: 0.5),
+                  borderRadius: BorderRadius.circular(30),
+                ),
+                child: const Center(
+                  child: CircularProgressIndicator(color: AppColors.gold),
                 ),
               ),
               const SizedBox(height: 20),
@@ -688,15 +703,14 @@ class _HomeScreenState extends State<HomeScreen> {
           _mevcutAyetFavoriMi(ayet);
 
           return Column(
+            mainAxisSize: MainAxisSize.min,
             children: [
-              Expanded(
-                child: Screenshot(
-                  controller: _screenshotController,
-                  child: VerseCard(
-                    ayet: ayet,
-                    kaydedilenNot: kaydedilenNot,
-                    onAddNote: () => _notEklePenceresiAc(ayet.id),
-                  ),
+              Screenshot(
+                controller: _screenshotController,
+                child: VerseCard(
+                  ayet: ayet,
+                  kaydedilenNot: kaydedilenNot,
+                  onAddNote: () => _notEklePenceresiAc(ayet.id),
                 ),
               ),
               const SizedBox(height: 20),

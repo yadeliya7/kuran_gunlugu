@@ -1,7 +1,10 @@
-import 'dart:async';
+import 'package:google_fonts/google_fonts.dart'; // Added for Monospace font
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:timer_builder/timer_builder.dart';
 import '../core/constants/colors.dart';
+import '../core/constants/strings.dart'; // Added strings import
+import '../core/services/global_settings.dart'; // Added GlobalSettings import
 import '../core/services/prayer_times_service.dart';
 
 class PrayerTimesCard extends StatefulWidget {
@@ -13,15 +16,38 @@ class PrayerTimesCard extends StatefulWidget {
   State<PrayerTimesCard> createState() => _PrayerTimesCardState();
 }
 
-class _PrayerTimesCardState extends State<PrayerTimesCard> {
-  String _cityName = 'Yükleniyor...';
+class _PrayerTimesCardState extends State<PrayerTimesCard>
+    with WidgetsBindingObserver {
+  String _cityName = ''; // Initialized empty, will load localized defaults
   Map<String, String> _prayerTimes = {};
   String? _currentPrayer;
+
+  // Helper for localization
+  String t(String key) {
+    return dictionary[GlobalSettings.currentLanguage]?[key] ?? key;
+  }
 
   @override
   void initState() {
     super.initState();
+    _cityName = t('loading');
+    WidgetsBinding.instance.addObserver(this);
     _loadPrayerTimes();
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    // Refresh prayer times when app resumes (e.g., returning from Settings)
+    if (state == AppLifecycleState.resumed && mounted) {
+      debugPrint('🔄 App resumed - Refreshing prayer times card');
+      _loadPrayerTimes();
+    }
   }
 
   Future<void> _loadPrayerTimes() async {
@@ -32,7 +58,11 @@ class _PrayerTimesCardState extends State<PrayerTimesCard> {
 
       if (mounted) {
         setState(() {
-          _cityName = PrayerTimesService.getCityName();
+          // If default city used, localize "Your Location"
+          final city = PrayerTimesService.getCityName();
+          _cityName = city == 'Konumunuz' || city == 'Your Location'
+              ? t('location_default')
+              : city;
           _prayerTimes = times;
           _currentPrayer = current;
         });
@@ -145,7 +175,9 @@ class _PrayerTimesCardState extends State<PrayerTimesCard> {
 
             final startTime = currentPrayer['time'] as DateTime;
             final endTime = nextPrayer['time'] as DateTime;
-            final nextPrayerName = nextPrayer['name'] as String;
+            // Name is resolved via key now
+            final nextPrayerKey = nextPrayer['key'] as String;
+            final nextPrayerName = t('prayer_$nextPrayerKey');
 
             final now = DateTime.now();
             final totalDuration = endTime.difference(startTime);
@@ -159,11 +191,6 @@ class _PrayerTimesCardState extends State<PrayerTimesCard> {
                   1.0,
                 );
 
-            // Invert logic if needed (progress bar usually shows "time passed" or "time remaining")
-            // Here we want "Time Passed" (growing bar)
-            // 0.0 -> Start of prayer time
-            // 1.0 -> End of prayer time (Adhan)
-
             final hours = remainingDuration.inHours.toString().padLeft(2, '0');
             final minutes = (remainingDuration.inMinutes % 60)
                 .toString()
@@ -173,23 +200,21 @@ class _PrayerTimesCardState extends State<PrayerTimesCard> {
                 .padLeft(2, '0');
 
             // Determine Label Text
-            String labelText = '$nextPrayerName Vaktine Kalan';
+            String labelText =
+                '${nextPrayerName.toUpperCase()} ${t('time_remaining_general')}';
             Color labelColor = AppColors.textGrey;
             FontWeight labelWeight = FontWeight.w500;
 
-            final key = nextPrayer['key'];
-            if (key == 'fajr') {
-              labelText = 'SAHURA KALAN SÜRE';
+            if (nextPrayerKey == 'fajr') {
+              labelText = t('time_remaining_sahur');
               labelColor = AppColors.gold;
               labelWeight = FontWeight.bold;
-            } else if (key == 'maghrib') {
-              labelText = 'İFTARA KALAN SÜRE';
+            } else if (nextPrayerKey == 'maghrib') {
+              labelText = t('time_remaining_iftar');
               labelColor = AppColors.gold;
               labelWeight = FontWeight.bold;
-            } else if (key == 'sunrise') {
-              labelText = 'GÜNEŞİN DOĞUŞUNA';
-            } else {
-              labelText = '${nextPrayerName.toUpperCase()} VAKTİNE KALAN';
+            } else if (nextPrayerKey == 'sunrise') {
+              labelText = t('time_remaining_sunrise');
             }
 
             return Column(
@@ -206,14 +231,69 @@ class _PrayerTimesCardState extends State<PrayerTimesCard> {
                         fontWeight: labelWeight,
                       ),
                     ),
-                    Text(
-                      '$hours:$minutes:$seconds',
-                      style: const TextStyle(
-                        color: AppColors.gold,
-                        fontSize: 24,
-                        fontWeight: FontWeight.bold,
-                        letterSpacing: 1,
-                      ),
+                    // Fixed-width Digital Clock Layout
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        // Hours
+                        SizedBox(
+                          width: 34, // Fixed width for 2 digits
+                          child: Text(
+                            hours,
+                            textAlign: TextAlign.center,
+                            style: GoogleFonts.robotoMono(
+                              color: AppColors.gold,
+                              fontSize: 24,
+                              fontWeight: FontWeight.bold,
+                              letterSpacing: -0.5,
+                            ),
+                          ),
+                        ),
+                        Text(
+                          ':',
+                          style: GoogleFonts.robotoMono(
+                            color: AppColors.gold,
+                            fontSize: 24,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        // Minutes
+                        SizedBox(
+                          width: 34,
+                          child: Text(
+                            minutes,
+                            textAlign: TextAlign.center,
+                            style: GoogleFonts.robotoMono(
+                              color: AppColors.gold,
+                              fontSize: 24,
+                              fontWeight: FontWeight.bold,
+                              letterSpacing: -0.5,
+                            ),
+                          ),
+                        ),
+                        Text(
+                          ':',
+                          style: GoogleFonts.robotoMono(
+                            color: AppColors.gold,
+                            fontSize: 24,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        // Seconds
+                        SizedBox(
+                          width: 34,
+                          child: Text(
+                            seconds,
+                            textAlign: TextAlign.center,
+                            style: GoogleFonts.robotoMono(
+                              color: AppColors.gold,
+                              fontSize: 24,
+                              fontWeight: FontWeight.bold,
+                              letterSpacing: -0.5,
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
                   ],
                 ),
@@ -247,19 +327,22 @@ class _PrayerTimesCardState extends State<PrayerTimesCard> {
       return const SizedBox(height: 60);
     }
 
+    // List of keys to support localized names
     final prayers = [
-      {'name': 'İmsak', 'key': 'fajr', 'icon': Icons.nightlight_round},
-      {'name': 'Güneş', 'key': 'sunrise', 'icon': Icons.wb_sunny},
-      {'name': 'Öğle', 'key': 'dhuhr', 'icon': Icons.wb_sunny_outlined},
-      {'name': 'İkindi', 'key': 'asr', 'icon': Icons.sunny_snowing},
-      {'name': 'Akşam', 'key': 'maghrib', 'icon': Icons.wb_twilight},
-      {'name': 'Yatsı', 'key': 'isha', 'icon': Icons.nights_stay},
+      {'key': 'fajr', 'icon': Icons.nightlight_round},
+      {'key': 'sunrise', 'icon': Icons.wb_sunny},
+      {'key': 'dhuhr', 'icon': Icons.wb_sunny_outlined},
+      {'key': 'asr', 'icon': Icons.sunny_snowing},
+      {'key': 'maghrib', 'icon': Icons.wb_twilight},
+      {'key': 'isha', 'icon': Icons.nights_stay},
     ];
 
     return Row(
       children: prayers.map((prayer) {
-        final isActive = prayer['key'] == _currentPrayer;
-        final time = _prayerTimes[prayer['key']] ?? '--:--';
+        final key = prayer['key'] as String;
+        final isActive = key == _currentPrayer;
+        final time = _prayerTimes[key] ?? '--:--';
+        final name = t('prayer_$key');
 
         return Expanded(
           child: Column(
@@ -273,7 +356,7 @@ class _PrayerTimesCardState extends State<PrayerTimesCard> {
               FittedBox(
                 fit: BoxFit.scaleDown,
                 child: Text(
-                  prayer['name'] as String,
+                  name,
                   style: TextStyle(
                     color: isActive ? AppColors.gold : AppColors.passiveGrey,
                     fontSize: 11,
