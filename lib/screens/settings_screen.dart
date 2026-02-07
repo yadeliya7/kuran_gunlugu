@@ -748,8 +748,8 @@ class _SettingsScreenState extends State<SettingsScreen>
                       children: [
                         Text(
                           GlobalSettings.currentLanguage == 'tr'
-                              ? "Kuran Günlüğü • v1.0.0"
-                              : "Quran Diary • v1.0.0",
+                              ? "Kuran Günlüğü • v1.0.1"
+                              : "Quran Diary • v1.0.1",
                           style: GoogleFonts.poppins(
                             color: Colors.white24,
                             fontSize: 12,
