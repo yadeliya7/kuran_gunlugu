@@ -117,6 +117,10 @@ final Map<String, Map<String, String>> dictionary = {
     'reminders_section': 'Hatırlatıcılar',
     'verse_notif_toggle': 'Günlük Ayet Hatırlatıcıları',
     'prayer_notif_title': 'Namaz Vakti Hatırlatıcıları',
+    // Prayer Times Disclaimer (About Section)
+    'disclaimer_title': 'Namaz Vakitleri & Yasal Uyarı',
+    'disclaimer_content':
+        'Namaz vakitleri, cihazınızın konumu (GPS) kullanılarak astronomik hesaplamalarla anlık üretilir. Türkiye için Diyanet İşleri Başkanlığı kriterleri (Temkin süreleri) esas alınmıştır.\n\nUyarı: Matematiksel hesaplama ve coğrafi farklar nedeniyle vakitlerde ±1-2 dakikalık sapmalar olabilir. İbadetlerinizde (özellikle İmsak ve İftar) temkinli olmak adına yerel ezan sesini veya cami vakitlerini teyit etmeniz tavsiye edilir.\n\nGizlilik: Konum veriniz sadece vakit hesaplaması için cihazınızda işlenir; sunucularımıza kaydedilmez veya paylaşılmaz.',
   },
   'en': {
     'app_name': 'Quran Diary',
@@ -234,6 +238,10 @@ final Map<String, Map<String, String>> dictionary = {
     'reminders_section': 'Reminders',
     'verse_notif_toggle': 'Daily Verse Reminders',
     'prayer_notif_title': 'Prayer Time Reminders',
+    // Prayer Times Disclaimer (About Section)
+    'disclaimer_title': 'Prayer Times & Disclaimer',
+    'disclaimer_content':
+        'Prayer times are generated instantly using astronomical calculations based on your device\'s location. For Turkey, the criteria of the Presidency of Religious Affairs (Diyanet) are adopted.\n\nDisclaimer: Due to mathematical calculations and local geographical differences, deviations of ±1-2 minutes may occur. It is recommended to follow the local adhan or mosque times for caution, especially for Fasting.\n\nPrivacy: Your location data is processed locally solely for calculation purposes and is never stored on our servers or shared.',
   },
 };
 
