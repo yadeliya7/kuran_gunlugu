@@ -254,9 +254,16 @@ class _PrayerTimesCardState extends State<PrayerTimesCard>
             FontWeight labelWeight = FontWeight.w500;
 
             if (nextPrayerKey == 'fajr') {
-              labelText = t('time_remaining_sahur');
-              labelColor = AppColors.gold;
-              labelWeight = FontWeight.bold;
+              // Only show "Sahura Kalan Süre" during Ramadan
+              if (_isRamadan()) {
+                labelText = t('time_remaining_sahur');
+                labelColor = AppColors.gold;
+                labelWeight = FontWeight.bold;
+              } else {
+                // Outside Ramadan, show generic fajr countdown
+                labelText =
+                    '${nextPrayerName.toUpperCase()} ${t('time_remaining_general')}';
+              }
             } else if (nextPrayerKey == 'maghrib') {
               // Only show "İftara Kalan Süre" during Ramadan
               if (_isRamadan()) {

@@ -218,16 +218,17 @@ class BildirimServisi {
             // Convert to TZDateTime
             final tzNotifTime = tz.TZDateTime.from(notifTime, tz.local);
 
-            // Get localized message
+            // Get localized message with Ramadan awareness
             String title;
             String body;
+            final isRamadan = _isRamadan();
 
             if (Platform.localeName.startsWith('tr')) {
-              body = _getPrayerNotificationTextTR(prayerKey);
-              title = 'Namaz Vakti 🕌';
+              body = _getPrayerNotificationTextTR(prayerKey, isRamadan);
+              title = _getPrayerNotificationTitleTR(prayerKey, isRamadan);
             } else {
-              body = _getPrayerNotificationTextEN(prayerKey);
-              title = 'Prayer Time 🕌';
+              body = _getPrayerNotificationTextEN(prayerKey, isRamadan);
+              title = _getPrayerNotificationTitleEN(prayerKey, isRamadan);
             }
 
             await _notifications.zonedSchedule(
@@ -266,37 +267,126 @@ class BildirimServisi {
     }
   }
 
-  static String _getPrayerNotificationTextTR(String prayerKey) {
+  /// Check if current date is in Ramadan (Hijri month 9)
+  static bool _isRamadan() {
+    final now = DateTime.now();
+    final hijriMonth = _getHijriMonth(now);
+    return hijriMonth == 9;
+  }
+
+  /// Convert Gregorian date to Hijri month (simplified algorithm)
+  static int _getHijriMonth(DateTime gregorian) {
+    int day = gregorian.day;
+    int month = gregorian.month;
+    int year = gregorian.year;
+
+    // Adjust for calculation
+    if (month < 3) {
+      year -= 1;
+      month += 12;
+    }
+
+    int a = (year / 100).floor();
+    int b = (a / 4).floor();
+    int c = 2 - a + b;
+    int e = (365.25 * (year + 4716)).floor();
+    int f = (30.6001 * (month + 1)).floor();
+
+    double jd = c + day + e + f - 1524.5;
+
+    // Convert Julian Day to Hijri
+    double l = jd - 1948440 + 10632;
+    int n = ((l - 1) / 10631).floor();
+    l = l - 10631 * n + 354;
+    int j =
+        (((10985 - l) / 5316).floor()) * (((50 * l) / 17719).floor()).toInt() +
+        ((l / 5670).floor()) * (((43 * l) / 15238).floor()).toInt();
+    l =
+        l -
+        ((30 - j) / 15).floor() * ((17719 * j) / 50).floor() -
+        (j / 16).floor() * ((15238 * j) / 43).floor() +
+        29;
+
+    int hijriMonth = ((24 * l) / 709).floor();
+
+    return hijriMonth;
+  }
+
+  static String _getPrayerNotificationTitleTR(
+    String prayerKey,
+    bool isRamadan,
+  ) {
+    if (isRamadan) {
+      if (prayerKey == 'fajr') return 'Sahur Vakti 🥛';
+      if (prayerKey == 'maghrib') return 'İftar Vakti 🍲';
+    }
+    return 'Vakit Yaklaşıyor ⏳';
+  }
+
+  static String _getPrayerNotificationTitleEN(
+    String prayerKey,
+    bool isRamadan,
+  ) {
+    if (isRamadan) {
+      if (prayerKey == 'fajr') return 'Suhoor Time 🥛';
+      if (prayerKey == 'maghrib') return 'Iftar Time 🍲';
+    }
+    return 'Prayer Time Approaching ⏳';
+  }
+
+  static String _getPrayerNotificationTextTR(String prayerKey, bool isRamadan) {
+    // Ramadan-specific messages for Fajr and Maghrib
+    if (isRamadan) {
+      if (prayerKey == 'fajr') {
+        return 'İmsak vaktine 15 dakika kaldı. Niyet etmeyi unutmayın.';
+      }
+      if (prayerKey == 'maghrib') {
+        return 'İftara 15 dakika kaldı. Allah kabul etsin.';
+      }
+    }
+
+    // Generic messages for all other cases
     switch (prayerKey) {
       case 'fajr':
-        return 'Sabah namazına 15 dakika kaldı 🕌';
+        return 'Sabah namazı vaktine 15 dakika kaldı.';
       case 'dhuhr':
-        return 'Öğle namazına 15 dakika kaldı 🕌';
+        return 'Öğle namazı vaktine 15 dakika kaldı.';
       case 'asr':
-        return 'İkindi namazına 15 dakika kaldı 🕌';
+        return 'İkindi namazı vaktine 15 dakika kaldı.';
       case 'maghrib':
-        return 'Akşam namazına 15 dakika kaldı 🕌';
+        return 'Akşam namazı vaktine 15 dakika kaldı.';
       case 'isha':
-        return 'Yatsı namazına 15 dakika kaldı 🕌';
+        return 'Yatsı namazı vaktine 15 dakika kaldı.';
       default:
-        return 'Namaz vaktine 15 dakika kaldı 🕌';
+        return 'Namaz vaktine 15 dakika kaldı.';
     }
   }
 
-  static String _getPrayerNotificationTextEN(String prayerKey) {
+  static String _getPrayerNotificationTextEN(String prayerKey, bool isRamadan) {
+    // Ramadan-specific messages for Fajr and Maghrib
+    if (isRamadan) {
+      if (prayerKey == 'fajr') {
+        return '15 minutes until Suhoor. Don\'t forget to make your intention.';
+      }
+      if (prayerKey == 'maghrib') {
+        return '15 minutes until Iftar. May Allah accept it.';
+      }
+    }
+
+    // Generic messages for all other cases
     switch (prayerKey) {
       case 'fajr':
-        return '15 minutes until Morning prayer 🕌';
+        return '15 minutes until Fajr prayer.';
       case 'dhuhr':
-        return '15 minutes until Dhuhr prayer 🕌';
+        return '15 minutes until Dhuhr prayer.';
       case 'asr':
-        return '15 minutes until Asr prayer 🕌';
+        return '15 minutes until Asr prayer.';
       case 'maghrib':
-        return '15 minutes until Maghrib prayer 🕌';
+        return '15 minutes until Maghrib prayer.';
       case 'isha':
-        return '15 minutes until Isha prayer 🕌';
+        return '15 minutes until Isha prayer.';
       default:
-        return '15 minutes until prayer 🕌';
+        return '15 minutes until prayer.';
     }
   }
 
