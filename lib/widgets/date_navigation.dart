@@ -16,10 +16,6 @@ class DateNavigation extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    bool isToday =
-        DateFormat('yyyy-MM-dd').format(selectedDate) ==
-        DateFormat('yyyy-MM-dd').format(DateTime.now());
-
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 10),
       decoration: BoxDecoration(
@@ -66,15 +62,13 @@ class DateNavigation extends StatelessWidget {
           IconButton(
             icon: Icon(
               Icons.arrow_forward_ios,
-              color: isToday ? Colors.white10 : Colors.white70,
+              color: Colors.white70,
               size: 20,
             ),
-            onPressed: isToday
-                ? null
-                : () {
-                    HapticFeedback.lightImpact();
-                    onDateChange(1);
-                  },
+            onPressed: () {
+              HapticFeedback.lightImpact();
+              onDateChange(1);
+            },
             padding: EdgeInsets.zero,
             constraints: const BoxConstraints(),
           ),

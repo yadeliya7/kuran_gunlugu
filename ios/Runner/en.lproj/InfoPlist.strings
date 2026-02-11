@@ -1,0 +1,4 @@
+/* Localized versions of Info.plist keys */
+
+NSLocationWhenInUseUsageDescription = "The application needs your location to correctly calculate prayer times for your area.";
+NSLocationAlwaysAndWhenInUseUsageDescription = "Location permission is required to automatically update prayer times when you travel.";
