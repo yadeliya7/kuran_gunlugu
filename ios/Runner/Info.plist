@@ -9,7 +9,7 @@
     </dict>
 	<!-- Location Permissions for Prayer Times -->
 	<key>NSLocationWhenInUseUsageDescription</key>
-	<string>Uygulama, bulunduğunuz yerin namaz vakitlerini ve kıble yönünü doğru hesaplayabilmek için konumunuza ihtiyaç duyar.</string>
+	<string>Uygulama, bulunduğunuz yerin namaz vakitlerini doğru hesaplayabilmek için konumunuza ihtiyaç duyar.</string>
 	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
 	<string>Namaz vakitlerinin seyahat ettiğinizde otomatik güncellenmesi için konum izni gereklidir.</string>
 	<key>CADisableMinimumFrameDurationOnPhone</key>

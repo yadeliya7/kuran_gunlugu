@@ -169,7 +169,7 @@ class BildirimServisi {
     // Import PrayerTimesService and strings at the top if not already imported
     final prefs = await SharedPreferences.getInstance();
     final bool bildirimlerAktif =
-        prefs.getBool('prayer_notifications_enabled') ?? false;
+        prefs.getBool('prayer_notifications_enabled') ?? true;
 
     // Cancel all prayer notifications (IDs 200-399) first
     for (int id = 200; id <= 399; id++) {

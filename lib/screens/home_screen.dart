@@ -284,10 +284,11 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       }
 
       DateTime yeniTarih = seciliTarih.add(Duration(days: gunFarki));
-      if (yeniTarih.isAfter(DateTime.now())) {
-        _isLoading = false;
-        return;
-      }
+      // Future date check removed to allow navigation
+      // if (yeniTarih.isAfter(DateTime.now())) {
+      //   _isLoading = false;
+      //   return;
+      // }
 
       seciliTarih = yeniTarih;
       isPlaying = false;
