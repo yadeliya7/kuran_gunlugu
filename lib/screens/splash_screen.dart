@@ -46,10 +46,18 @@ class _SplashScreenState extends State<SplashScreen> {
     try {
       // Bildirim servisini başlat
       await BildirimServisi.baslat();
-      BildirimServisi.gunlukBildirimKur();
-      BildirimServisi.namazBildirimleriniKur(); // Prayer notifications
+
+      // ⚠️ CRITICAL: await ensures notifications are FULLY scheduled before app starts
+      debugPrint('📢 Scheduling verse notifications...');
+      await BildirimServisi.gunlukBildirimKur();
+
+      debugPrint('📢 Scheduling prayer notifications...');
+      await BildirimServisi.namazBildirimleriniKur();
+
+      debugPrint('✅ All notifications scheduled successfully');
     } catch (e) {
-      debugPrint("⚠️ Bildirim servisi hatası (Önemli değil, devam et): $e");
+      debugPrint("❌ CRITICAL: Bildirim servisi hatası: $e");
+      // Continue anyway - notifications will retry on next app open
     }
 
     try {
