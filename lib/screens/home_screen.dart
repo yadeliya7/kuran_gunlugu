@@ -742,6 +742,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
               // 3. İçerik (Scrollable)
               Expanded(
                 child: SingleChildScrollView(
+                  physics: const ClampingScrollPhysics(), // iOS bounce fix
                   child: Column(
                     children: [
                       // Prayer Times Card - Key forces rebuild when counter changes

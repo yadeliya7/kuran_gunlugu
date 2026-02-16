@@ -13,11 +13,30 @@ class PrayerTimesService {
   static String _cityName = 'İstanbul';
   static PrayerTimes? _cachedPrayerTimes;
   static DateTime? _cachedDate;
-  static DateTime? _lastGPSCheck; // Track last successful GPS
 
-  /// Get formatted Hijri date using simplified calculation
+  /// Apply manual offset to align with Diyanet (Turkey)
+  /// Currently applying -1 day offset (e.g. Feb 19 -> Feb 20 effectively for calculation)
+  /// WAITING: User reported Feb 18 is calculated as Ramadan 1, but Diyanet says Feb 19.
+  /// This means our algo is 1 day EARLY. We need to SUBTRACT 1 day from the date to push it back?
+  /// Wait, if Algo says 18th is Ramadan 1, and Diyanet says 19th is Ramadan 1.
+  /// Then on 18th, Algo says "1 Ramazan", Diyanet says "30 Shaban".
+  /// So Algo is AHEAD. To fix "1 Ramazan" to appear on 19th instead of 18th:
+  /// On 18th: Algo(18) = 1 Ram. We want Algo(18) = 30 Shab.
+  /// On 19th: Algo(19) = 2 Ram. We want Algo(19) = 1 Ram.
+  /// So effectively we need to simulate a date that is 1 day BEHIND?
+  /// If we pass (Date - 1 day) to Algo:
+  /// On 19th (Real): Pass 18th. Algo(18) = 1 Ram. Matches Diyanet(19) = 1 Ram.
+  /// CORRECT. Offset is -1 Day.
+  static DateTime _applyHijriOffset(DateTime date) {
+    return date.subtract(const Duration(days: 1));
+  }
+
+  /// Get formatted Hijri date using simplified calculation with offset
   static String getHijriDate(DateTime date) {
     try {
+      // Apply offset first
+      final adjustedDate = _applyHijriOffset(date);
+
       // Turkish month names for Hijri calendar
       const turkishMonths = [
         'Muharrem',
@@ -54,10 +73,10 @@ class PrayerTimesService {
           ? turkishMonths
           : englishMonths;
 
-      // Convert Gregorian to Julian Day Number
-      int d = date.day;
-      int m = date.month;
-      int y = date.year;
+      // Convert Gregorian (adjusted) to Julian Day Number
+      int d = adjustedDate.day;
+      int m = adjustedDate.month;
+      int y = adjustedDate.year;
 
       if (m < 3) {
         y--;
@@ -102,32 +121,155 @@ class PrayerTimesService {
     }
   }
 
-  /// Get coordinates (from GPS or default)
+  /// Get Hijri month number (1-12) with offset
+  /// Used for Ramadan detection (Month 9)
+  static int getHijriMonth(DateTime date) {
+    try {
+      final adjustedDate = _applyHijriOffset(date);
+
+      int d = adjustedDate.day;
+      int m = adjustedDate.month;
+      int y = adjustedDate.year;
+
+      if (m < 3) {
+        y--;
+        m += 12;
+      }
+
+      int a = (y / 100).floor();
+      int b = 2 - a + (a / 4).floor();
+
+      int jd =
+          (365.25 * (y + 4716)).floor() +
+          (30.6001 * (m + 1)).floor() +
+          d +
+          b -
+          1524;
+
+      int l = jd - 1948440 + 10632;
+      int n = ((l - 1) / 10631).floor();
+      l = l - 10631 * n + 354;
+      int j =
+          ((10985 - l) / 5316).floor() * ((50 * l) / 17719).floor() +
+          ((l / 5670).floor()) * ((43 * l) / 15238).floor();
+      l =
+          l -
+          ((30 - j) / 15).floor() * ((17719 * j) / 50).floor() -
+          (j / 16).floor() * ((15238 * j) / 43).floor() +
+          29;
+
+      int hMonth = ((24 * l) / 709).floor();
+      return hMonth;
+    } catch (e) {
+      return 0;
+    }
+  }
+
+  /// Get coordinates (from GPS or persistent cache)
+  /// Strategy: Get GPS once when app opens, save to persistent storage
+  /// Avoids background location requests (iOS restriction)
   static Future<Coordinates> getCoordinates() async {
-    // Use cached GPS coordinates if less than 5 minutes old
-    if (_currentCoordinates != null &&
-        _cityName != 'İstanbul' &&
-        _lastGPSCheck != null &&
-        DateTime.now().difference(_lastGPSCheck!).inMinutes < 5) {
+    // First, check memory cache
+    if (_currentCoordinates != null) {
+      debugPrint('📍 Using memory-cached coordinates');
       return _currentCoordinates!;
     }
 
+    // If not in memory, try to load from SharedPreferences
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final cachedLat = prefs.getDouble('cached_latitude');
+      final cachedLng = prefs.getDouble('cached_longitude');
+
+      if (cachedLat != null && cachedLng != null) {
+        _currentCoordinates = Coordinates(cachedLat, cachedLng);
+        _cityName = prefs.getString('city_name') ?? 'Konumunuz';
+        debugPrint(
+          '📍 Loaded coordinates from storage: $cachedLat, $cachedLng ($_cityName)',
+        );
+
+        // Now try to refresh GPS in background (non-blocking)
+        // This will update for next time, but return cached immediately
+        _refreshGPSInBackground();
+
+        return _currentCoordinates!;
+      }
+    } catch (e) {
+      debugPrint('⚠️ Could not load cached coordinates: $e');
+    }
+
+    // If no cache exists, must get GPS now (first-time user)
+    debugPrint('📍 No cached coordinates, requesting GPS...');
+    return await _fetchAndSaveGPS();
+  }
+
+  /// Force refresh location (called when user explicitly wants to update)
+  static Future<void> forceRefreshLocation() async {
+    debugPrint('🔄 Force refreshing GPS location...');
+    _currentCoordinates = null;
+    await _fetchAndSaveGPS();
+  }
+
+  /// Background GPS refresh (non-blocking)
+  static void _refreshGPSInBackground() async {
+    try {
+      debugPrint('🔄 Attempting background GPS refresh...');
+
+      // Check permission first
+      LocationPermission permission = await Geolocator.checkPermission();
+
+      // If denied, skip silently
+      if (permission == LocationPermission.denied ||
+          permission == LocationPermission.deniedForever) {
+        debugPrint(
+          '📍 Location permission denied, skipping background refresh',
+        );
+        return;
+      }
+
+      // Try to get GPS with timeout
+      Position position =
+          await Geolocator.getCurrentPosition(
+            desiredAccuracy: LocationAccuracy.medium,
+          ).timeout(
+            const Duration(seconds: 10),
+            onTimeout: () {
+              throw Exception('GPS timeout after 10 seconds');
+            },
+          );
+
+      // Save new coordinates
+      _currentCoordinates = Coordinates(position.latitude, position.longitude);
+
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setDouble('cached_latitude', position.latitude);
+      await prefs.setDouble('cached_longitude', position.longitude);
+      await prefs.setString(
+        'last_location_update',
+        DateTime.now().toIso8601String(),
+      );
+
+      debugPrint(
+        '✅ Background GPS refresh successful: ${position.latitude}, ${position.longitude}',
+      );
+    } catch (e) {
+      debugPrint('⚠️ Background GPS refresh failed (not critical): $e');
+    }
+  }
+
+  /// Fetch GPS and save to persistent storage
+  static Future<Coordinates> _fetchAndSaveGPS() async {
     try {
       // Check permission
       LocationPermission permission = await Geolocator.checkPermission();
 
-      // If permission is permanently denied, use cached or default
+      // If permission is permanently denied, use default
       if (permission == LocationPermission.deniedForever) {
         debugPrint(
-          '📍 Konum izni kalıcı olarak reddedildi, varsayılan konum kullanılıyor: İstanbul',
+          '📍 Location permission permanently denied, using default: Istanbul',
         );
-        if (_currentCoordinates == null) {
-          _currentCoordinates = Coordinates(
-            _defaultLatitude,
-            _defaultLongitude,
-          );
-          _cityName = 'İstanbul';
-        }
+        _currentCoordinates = Coordinates(_defaultLatitude, _defaultLongitude);
+        _cityName = 'İstanbul';
         return _currentCoordinates!;
       }
 
@@ -135,51 +277,77 @@ class PrayerTimesService {
       if (permission == LocationPermission.denied) {
         permission = await Geolocator.requestPermission();
 
-        // If user denies, don't cache - try again next time
         if (permission == LocationPermission.denied) {
-          debugPrint(
-            '📍 Konum izni reddedildi (geçici), varsayılan kullanılıyor ama tekrar denenecek',
+          debugPrint('📍 Location permission denied, using default: Istanbul');
+          _currentCoordinates = Coordinates(
+            _defaultLatitude,
+            _defaultLongitude,
           );
-          return Coordinates(_defaultLatitude, _defaultLongitude);
+          _cityName = 'İstanbul';
+          return _currentCoordinates!;
         }
       }
 
-      // Try to get actual GPS position
-      debugPrint('📍 GPS konumu alınıyor... (30sn timeout)');
+      // Get GPS position
+      debugPrint('📍 Requesting GPS position (30s timeout)...');
       Position position =
           await Geolocator.getCurrentPosition(
             desiredAccuracy: LocationAccuracy.medium,
           ).timeout(
             const Duration(seconds: 30),
             onTimeout: () {
-              throw Exception('GPS 30 saniye içinde yanıt vermedi');
+              throw Exception('GPS did not respond within 30 seconds');
             },
           );
 
-      // Cache the REAL GPS coordinates
+      // Save to memory cache
       _currentCoordinates = Coordinates(position.latitude, position.longitude);
-      _lastGPSCheck = DateTime.now(); // Mark GPS check time
 
-      // Try to get city name from cache
+      // Save to persistent storage
       final prefs = await SharedPreferences.getInstance();
+      await prefs.setDouble('cached_latitude', position.latitude);
+      await prefs.setDouble('cached_longitude', position.longitude);
+      await prefs.setString(
+        'last_location_update',
+        DateTime.now().toIso8601String(),
+      );
+
+      // Try to get city name
       _cityName = prefs.getString('city_name') ?? 'Konumunuz';
 
       debugPrint(
-        '✅ GPS Konumu alındı: ${position.latitude}, ${position.longitude}',
+        '✅ GPS position obtained and saved: ${position.latitude}, ${position.longitude}',
       );
       return _currentCoordinates!;
     } catch (e) {
-      debugPrint('⚠️ GPS hatası: $e');
+      debugPrint('❌ GPS error: $e');
 
-      // If we have previously cached REAL coordinates, use them
-      if (_currentCoordinates != null && _cityName != 'İstanbul') {
-        debugPrint('📍 Önceki GPS konumu kullanılıyor');
+      // If we have previously cached coordinates in memory, use them
+      if (_currentCoordinates != null) {
+        debugPrint('📍 Using previous memory cache due to GPS error');
         return _currentCoordinates!;
       }
 
-      // Otherwise use default but DON'T cache it
-      debugPrint('📍 Geçici olarak İstanbul kullanılıyor (cache yok)');
-      return Coordinates(_defaultLatitude, _defaultLongitude);
+      // Check SharedPreferences one more time
+      try {
+        final prefs = await SharedPreferences.getInstance();
+        final cachedLat = prefs.getDouble('cached_latitude');
+        final cachedLng = prefs.getDouble('cached_longitude');
+
+        if (cachedLat != null && cachedLng != null) {
+          _currentCoordinates = Coordinates(cachedLat, cachedLng);
+          debugPrint('📍 Using stored cache due to GPS error');
+          return _currentCoordinates!;
+        }
+      } catch (e2) {
+        debugPrint('❌ Could not load fallback cache: $e2');
+      }
+
+      // Last resort: use default Istanbul
+      debugPrint('📍 All location methods failed, using default: Istanbul');
+      _currentCoordinates = Coordinates(_defaultLatitude, _defaultLongitude);
+      _cityName = 'İstanbul';
+      return _currentCoordinates!;
     }
   }
 
