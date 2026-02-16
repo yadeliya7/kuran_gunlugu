@@ -1,6 +1,7 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:flutter_timezone/flutter_timezone.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:timezone/data/latest.dart' as tz;
 import 'package:timezone/timezone.dart' as tz;
@@ -13,9 +14,13 @@ class BildirimServisi {
   static Future<void> baslat() async {
     tz.initializeTimeZones();
 
+    // 🔧 DYNAMIC TIMEZONE DETECTION (iOS Fix)
     try {
-      tz.setLocalLocation(tz.getLocation('Europe/Istanbul'));
+      final String currentTimeZone = await FlutterTimezone.getLocalTimezone();
+      tz.setLocalLocation(tz.getLocation(currentTimeZone));
+      debugPrint('✅ Timezone set to: $currentTimeZone');
     } catch (e) {
+      debugPrint('⚠️ Could not get device timezone, falling back to UTC: $e');
       tz.setLocalLocation(tz.UTC);
     }
 
@@ -35,14 +40,13 @@ class BildirimServisi {
 
     await _notifications.initialize(ayarlar);
 
-    // 👇 ARTIK SADECE BİLDİRİM İZNİ İSTİYORUZ (Alarm İzni İstemiyoruz)
+    // 👇 Request notification permissions (Android only, iOS handled in initialization)
     final androidImplementation = _notifications
         .resolvePlatformSpecificImplementation<
           AndroidFlutterLocalNotificationsPlugin
         >();
     if (androidImplementation != null) {
       await androidImplementation.requestNotificationsPermission();
-      // ❌ await androidImplementation.requestExactAlarmsPermission(); // BU SATIRI SİLDİK
     }
   }
 
@@ -73,23 +77,28 @@ class BildirimServisi {
       final now = tz.TZDateTime.now(tz.local);
 
       // SABAH VAKTİ HESABI (Standart)
-      // Eğer saat 09:30'u geçtiyse yarını verir, geçmediyse bugünü verir.
       tz.TZDateTime sabahVakti = _sonrakiZaman(09, 30);
 
       // AKŞAM VAKTİ HESABI (Akıllı Mod 🧠)
-      // Normalde _sonrakiZaman bize en yakın akşamı verir (Bugün 20:00 veya Yarın 20:00).
       tz.TZDateTime aksamVakti = _sonrakiZaman(20, 00);
 
-      // KRİTİK KONTROL:
-      // Eğer hesaplanan akşam vakti "BUGÜN" ise, kullanıcı zaten şu an uygulamada olduğu için
-      // bugünün akşam bildirimini atlayıp YARINA erteliyoruz.
+      // KRİTİK KONTROL: Skip today's evening notification if user is currently active
       if (aksamVakti.day == now.day) {
         aksamVakti = aksamVakti.add(const Duration(days: 1));
       }
 
+      // 🍎 iOS 15+ Notification Details
+      const iosDetails = DarwinNotificationDetails(
+        presentAlert: true,
+        presentBadge: true,
+        presentSound: true,
+        interruptionLevel: InterruptionLevel.timeSensitive,
+        threadIdentifier: 'verse_notifications',
+      );
+
       // 3. Gelecek 30 GÜN için planla
       for (int i = 0; i < 30; i++) {
-        // --- A) SABAH BİLDİRİMİ (Kesinlikle Gidecek) ---
+        // --- A) SABAH BİLDİRİMİ ---
         String sabahBaslik;
         String sabahIcerik;
 
@@ -116,14 +125,14 @@ class BildirimServisi {
               priority: Priority.high,
               color: Color(0xFFD4AF37),
             ),
-            iOS: DarwinNotificationDetails(),
+            iOS: iosDetails,
           ),
           androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
           uiLocalNotificationDateInterpretation:
               UILocalNotificationDateInterpretation.absoluteTime,
         );
 
-        // --- B) AKŞAM BİLDİRİMİ (Bugün Pas Geçildi, Yarından Başlar) ---
+        // --- B) AKŞAM BİLDİRİMİ ---
         String aksamBaslik;
         String aksamIcerik;
 
@@ -150,7 +159,7 @@ class BildirimServisi {
               priority: Priority.high,
               color: Color(0xFFD4AF37),
             ),
-            iOS: DarwinNotificationDetails(),
+            iOS: iosDetails,
           ),
           androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
           uiLocalNotificationDateInterpretation:
@@ -166,7 +175,6 @@ class BildirimServisi {
   }
 
   static Future<void> namazBildirimleriniKur() async {
-    // Import PrayerTimesService and strings at the top if not already imported
     final prefs = await SharedPreferences.getInstance();
     final bool bildirimlerAktif =
         prefs.getBool('prayer_notifications_enabled') ?? true;
@@ -187,6 +195,15 @@ class BildirimServisi {
       final now = tz.TZDateTime.now(tz.local);
 
       int notificationId = 200; // Start from ID 200
+
+      // 🍎 iOS 15+ Prayer Notification Details (Time Sensitive)
+      const iosPrayerDetails = DarwinNotificationDetails(
+        presentAlert: true,
+        presentBadge: true,
+        presentSound: true,
+        interruptionLevel: InterruptionLevel.timeSensitive,
+        threadIdentifier: 'prayer_times_group',
+      );
 
       // Schedule for next 7 days
       for (int day = 0; day < 7; day++) {
@@ -246,7 +263,7 @@ class BildirimServisi {
                   color: Color(0xFFD4AF37),
                   icon: 'notification_icon',
                 ),
-                iOS: DarwinNotificationDetails(),
+                iOS: iosPrayerDetails,
               ),
               androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
               uiLocalNotificationDateInterpretation:
@@ -270,46 +287,8 @@ class BildirimServisi {
   /// Check if current date is in Ramadan (Hijri month 9)
   static bool _isRamadan() {
     final now = DateTime.now();
-    final hijriMonth = _getHijriMonth(now);
+    final hijriMonth = PrayerTimesService.getHijriMonth(now);
     return hijriMonth == 9;
-  }
-
-  /// Convert Gregorian date to Hijri month (simplified algorithm)
-  static int _getHijriMonth(DateTime gregorian) {
-    int day = gregorian.day;
-    int month = gregorian.month;
-    int year = gregorian.year;
-
-    // Adjust for calculation
-    if (month < 3) {
-      year -= 1;
-      month += 12;
-    }
-
-    int a = (year / 100).floor();
-    int b = (a / 4).floor();
-    int c = 2 - a + b;
-    int e = (365.25 * (year + 4716)).floor();
-    int f = (30.6001 * (month + 1)).floor();
-
-    double jd = c + day + e + f - 1524.5;
-
-    // Convert Julian Day to Hijri
-    double l = jd - 1948440 + 10632;
-    int n = ((l - 1) / 10631).floor();
-    l = l - 10631 * n + 354;
-    int j =
-        (((10985 - l) / 5316).floor()) * (((50 * l) / 17719).floor()).toInt() +
-        ((l / 5670).floor()) * (((43 * l) / 15238).floor()).toInt();
-    l =
-        l -
-        ((30 - j) / 15).floor() * ((17719 * j) / 50).floor() -
-        (j / 16).floor() * ((15238 * j) / 43).floor() +
-        29;
-
-    int hijriMonth = ((24 * l) / 709).floor();
-
-    return hijriMonth;
   }
 
   static String _getPrayerNotificationTitleTR(

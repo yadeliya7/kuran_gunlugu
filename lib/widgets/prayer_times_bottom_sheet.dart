@@ -11,45 +11,10 @@ void showPrayerTimesBottomSheet(BuildContext context) {
     return dictionary[GlobalSettings.currentLanguage]?[key] ?? key;
   }
 
-  // Convert Gregorian date to Hijri month (simplified algorithm)
-  int getHijriMonth(DateTime gregorian) {
-    int day = gregorian.day;
-    int month = gregorian.month;
-    int year = gregorian.year;
-
-    if (month < 3) {
-      year -= 1;
-      month += 12;
-    }
-
-    int a = (year / 100).floor();
-    int b = (a / 4).floor();
-    int c = 2 - a + b;
-    int e = (365.25 * (year + 4716)).floor();
-    int f = (30.6001 * (month + 1)).floor();
-
-    double jd = c + day + e + f - 1524.5;
-
-    double l = jd - 1948440 + 10632;
-    int n = ((l - 1) / 10631).floor();
-    l = l - 10631 * n + 354;
-    int j =
-        (((10985 - l) / 5316).floor()) * (((50 * l) / 17719).floor()).toInt() +
-        ((l / 5670).floor()) * (((43 * l) / 15238).floor()).toInt();
-    l =
-        l -
-        ((30 - j) / 15).floor() * ((17719 * j) / 50).floor() -
-        (j / 16).floor() * ((15238 * j) / 43).floor() +
-        29;
-
-    int hijriMonth = ((24 * l) / 709).floor();
-    return hijriMonth;
-  }
-
   // Check if current date is in Ramadan (Hijri month 9)
   bool isRamadan() {
     final now = DateTime.now();
-    final hijriMonth = getHijriMonth(now);
+    final hijriMonth = PrayerTimesService.getHijriMonth(now);
     return hijriMonth == 9;
   }
 
