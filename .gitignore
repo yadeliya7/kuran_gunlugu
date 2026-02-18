@@ -43,3 +43,15 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+
+# Fastlane - Sensitive files
+ios/*.cer
+ios/*.p12
+ios/*.mobileprovision
+ios/fastlane/report.xml
+ios/fastlane/Preview.html
+ios/fastlane/screenshots
+ios/fastlane/test_output
+ios/fastlane/.env*
+ios/vendor/
+ios/Gemfile.lock

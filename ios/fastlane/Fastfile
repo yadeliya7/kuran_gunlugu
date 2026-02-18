@@ -17,33 +17,28 @@ default_platform(:ios)
 
 platform :ios do
   
-  # 1. Burası tüm lane'lerden önce çalışan kısımdır
   before_all do
-    # API Key'i burada tanımlarsan tüm lane'lerde kullanabilirsin
-    api_key = app_store_connect_api_key(
-      key_id: ENV["ASC_KEY_ID"]
+    app_store_connect_api_key(
+      key_id: ENV["ASC_KEY_ID"],
       issuer_id: ENV["ASC_ISSUER_ID"],
-      key_filepath: "~/Documents/appstoreconnect/AuthKey_G3.p8", # p8 dosyasının yolu
+      key_filepath: "~/Documents/appstoreconnect/AuthKey_G3.p8",
       duration: 1200,
       in_house: false
     )
-    # Tanımladığımız anahtarı lane'lerin erişebileceği bir yere kaydediyoruz
-    LaneContext[SharedValues::APP_STORE_CONNECT_API_KEY] = api_key
   end
 
   desc "Uygulamayı TestFlight'a gönderir"
   lane :deploy do
-    # Eğer before_all kullanmak istemezsen, tam burada da tanımlayabilirsin:
-    # api_key = app_store_connect_api_key(...)
+    update_code_signing_settings(
+      use_automatic_signing: true,
+      path: "Runner.xcodeproj"
+    )
+    
+    build_app(
+      scheme: "Runner",
+      export_method: "app-store"
+    )
 
-    # 2. Sertifikaları yönetirken anahtarı kullan
-    get_certificates
-    get_provisioning_profile
-
-    # 3. Uygulamayı derle
-    build_app(scheme: "Runner")
-
-    # 4. App Store'a yükle (Anahtarı otomatik olarak buradan çeker)
     upload_to_testflight(
       skip_waiting_for_build_processing: true
     )
