@@ -96,8 +96,8 @@ class BildirimServisi {
         threadIdentifier: 'verse_notifications',
       );
 
-      // 3. Gelecek 30 GÜN için planla
-      for (int i = 0; i < 30; i++) {
+      // 3. Gelecek 7 GÜN için planla (iOS 64 limitini aşmamak için namaz bildirimleri ile dengelendi)
+      for (int i = 0; i < 7; i++) {
         // --- A) SABAH BİLDİRİMİ ---
         String sabahBaslik;
         String sabahIcerik;
