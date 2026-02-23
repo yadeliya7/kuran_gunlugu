@@ -26,8 +26,7 @@ class _SplashScreenState extends State<SplashScreen> {
   }
 
   Future<void> _baslangicYuklemeleri() async {
-    // 1. Logoyu göster (500ms bekle)
-    await Future.delayed(const Duration(milliseconds: 500));
+    // 1. Logoyu göster
 
     try {
       // Tarih formatını yükle
@@ -47,14 +46,14 @@ class _SplashScreenState extends State<SplashScreen> {
       // Bildirim servisini başlat
       await BildirimServisi.baslat();
 
-      // ⚠️ CRITICAL: await ensures notifications are FULLY scheduled before app starts
-      debugPrint('📢 Scheduling verse notifications...');
-      await BildirimServisi.gunlukBildirimKur();
+      // ⚠️ We NO LONGER await notification scheduling to speed up app startup
+      debugPrint('📢 Scheduling verse notifications in background...');
+      BildirimServisi.gunlukBildirimKur();
 
-      debugPrint('📢 Scheduling prayer notifications...');
-      await BildirimServisi.namazBildirimleriniKur();
+      debugPrint('📢 Scheduling prayer notifications in background...');
+      BildirimServisi.namazBildirimleriniKur();
 
-      debugPrint('✅ All notifications scheduled successfully');
+      debugPrint('✅ All notifications triggered for background scheduling');
     } catch (e) {
       debugPrint("❌ CRITICAL: Bildirim servisi hatası: $e");
       // Continue anyway - notifications will retry on next app open
@@ -76,9 +75,7 @@ class _SplashScreenState extends State<SplashScreen> {
       debugPrint("⚠️ Ayarlar okunamadı: $e");
     }
 
-    // 5. HER ŞEY BİTTİKTEN SONRA
-    await Future.delayed(const Duration(seconds: 1));
-
+    // 5. HER ŞEY BİTTİKTEN SONRA, beklemeden geçiş yap
     if (mounted) {
       debugPrint("🚀 Ana Ekrana Geçiş Yapılıyor...");
       Navigator.of(context).pushReplacement(
